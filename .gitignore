@@ -1,0 +1,28 @@
+# Local database
+data/*
+!data/.gitkeep
+*.db
+
+# User exports and generated reports (personal health data)
+imports/jefit/*
+!imports/jefit/.gitkeep
+imports/whoop/*
+!imports/whoop/.gitkeep
+whoop_export/
+reports/**/*
+!reports/.gitkeep
+*.zip
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.env
+.env.*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp

@@ -1,0 +1,51 @@
+{
+  "timezone": "Asia/Kolkata",
+  "user": {
+    "name": "Roshan",
+    "weight_kg": 69,
+    "height_cm": 163,
+    "waist_cm": 85,
+    "protein_target_g": 140,
+    "goal": "Muscle gain and body recomposition"
+  },
+  "schedule": {
+    "monday": "Legs A",
+    "tuesday": "Push A",
+    "wednesday": "Pull A",
+    "thursday": "OFF",
+    "friday": "Legs B",
+    "saturday": "Upper B",
+    "sunday": "OFF"
+  },
+  "recovery_thresholds": {
+    "green": 67,
+    "yellow": 50
+  },
+  "training_rules": {
+    "green": {
+      "compounds_rir": "1-2",
+      "accessories_rir": "0-2",
+      "summary": "Full session — push load with double progression."
+    },
+    "yellow": {
+      "cut_accessory_sets": 1,
+      "compounds_rir": "3",
+      "summary": "Train as planned but dial back accessories."
+    },
+    "red": {
+      "volume_pct": 50,
+      "alternative": "mobility and walking",
+      "summary": "Recovery is low — light session or rest."
+    },
+    "unknown": {
+      "summary": "No Whoop data — train at RIR 3 and stop if performance drops."
+    }
+  },
+  "session_notes": {
+    "Legs A": "Leg press, goblet squat, RDL, leg extension, calves, core",
+    "Push A": "Bench, machine fly, incline DB, shoulder press, lateral raise, triceps",
+    "Pull A": "Pull-ups, lat pulldown, face pull, incline row, biceps",
+    "Legs B": "Squat pattern, RDL, leg curl, leg press, calves",
+    "Upper B": "Incline press, rows, shoulders, arms — lighter upper day"
+  }
+}

@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#080b10" id="meta-theme-color">
+  <title>FitCoach</title>
+  <script>
+    (function () {
+      var saved = localStorage.getItem("fitcoach-theme");
+      var theme = saved;
+      if (!theme) {
+        theme = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+      }
+      document.documentElement.setAttribute("data-theme", theme);
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute("content", theme === "light" ? "#f0f4f9" : "#080b10");
+    })();
+  </script>
+  <link rel="stylesheet" href="/static/dashboard.css?v=8">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon">💪</div>
+        <div class="brand-text">
+          <h1>FitCoach</h1>
+          <p id="generated-at">Loading…</p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <div class="theme-toggle" role="group" aria-label="Theme">
+          <button type="button" class="theme-btn" data-theme="dark" id="theme-dark">Dark</button>
+          <button type="button" class="theme-btn" data-theme="light" id="theme-light">Light</button>
+        </div>
+        <button class="btn-icon" id="btn-refresh" title="Refresh">↻</button>
+      </div>
+    </header>
+
+    <div class="upload-bar">
+      <label class="upload-chip upload-jefit">
+        <span class="chip-dot"></span>
+        <span>Jefit</span>
+        <input type="file" id="jefit-file" accept=".csv,text/csv">
+        <small id="jefit-status"></small>
+      </label>
+      <label class="upload-chip upload-whoop">
+        <span class="chip-dot"></span>
+        <span>Whoop</span>
+        <input type="file" id="whoop-file" accept=".zip,.csv,application/zip,text/csv">
+        <small id="whoop-status"></small>
+      </label>
+    </div>
+
+    <div id="loading" class="loading">
+      <div class="loader"></div>
+      Loading your data…
+    </div>
+
+    <div id="content" style="display:none;">
+
+      <section class="hero zone-unknown" id="hero-section">
+        <div class="hero-top">
+          <div>
+            <p class="hero-greeting" id="briefing-date">Morning Briefing</p>
+            <h2 class="hero-headline" id="briefing-headline"></h2>
+            <p class="hero-sub" id="briefing-user"></p>
+          </div>
+          <div class="recovery-ring-wrap" id="briefing-recovery"></div>
+        </div>
+        <div class="hero-action" id="briefing-action"></div>
+        <ul class="hero-mods" id="briefing-mods"></ul>
+        <div class="hero-notes">
+          <span id="briefing-yesterday"></span>
+          <span id="briefing-protein"></span>
+        </div>
+        <div class="hero-stale" id="briefing-stale" style="display:none;"></div>
+        <div id="session-comparison"></div>
+      </section>
+
+      <div class="metric-row" id="metric-row"></div>
+
+      <section class="section">
+        <div class="section-head">
+          <span class="section-title">This Week</span>
+          <span class="section-sub">Plan vs actual</span>
+        </div>
+        <div class="week-scroll" id="week-strip"></div>
+      </section>
+
+      <div class="grid grid-2">
+        <section class="card">
+          <div class="card-inner-title">Overview</div>
+          <div class="stat-grid" id="overview-stats"></div>
+          <div class="recommendation" id="today-recommendation"></div>
+        </section>
+
+        <section class="card">
+          <div class="card-inner-title">Coaching Insights</div>
+          <ul class="insights-list" id="insights-list"></ul>
+        </section>
+      </div>
+
+      <div class="grid grid-2" style="margin-top:1rem;">
+        <section class="card">
+          <div class="card-inner-title">Last Workout</div>
+          <div id="last-workout"></div>
+        </section>
+
+        <section class="card">
+          <div class="card-inner-title">Recent Imports</div>
+          <div class="import-log" id="import-log"></div>
+        </section>
+      </div>
+
+      <section class="card section" style="margin-top:1rem;">
+        <div class="card-inner-title">Activity Log</div>
+        <div class="log-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Recovery</th>
+                <th>Sleep</th>
+                <th>Gym</th>
+                <th>Planned</th>
+              </tr>
+            </thead>
+            <tbody id="daily-log"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="modal" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <button class="modal-close" id="modal-close">Close</button>
+      <h3 id="modal-title">Workout</h3>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const $ = (sel) => document.querySelector(sel);
+
+    const THEME_KEY = "fitcoach-theme";
+
+    function getTheme() {
+      return document.documentElement.getAttribute("data-theme") || "dark";
+    }
+
+    function setTheme(theme) {
+      document.documentElement.setAttribute("data-theme", theme);
+      localStorage.setItem(THEME_KEY, theme);
+      const meta = $("#meta-theme-color");
+      if (meta) meta.setAttribute("content", theme === "light" ? "#f0f4f9" : "#080b10");
+      document.querySelectorAll(".theme-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.theme === theme);
+      });
+    }
+
+    function initThemeToggle() {
+      setTheme(getTheme());
+      $("#theme-dark").addEventListener("click", () => setTheme("dark"));
+      $("#theme-light").addEventListener("click", () => setTheme("light"));
+    }
+
+    function zoneClass(zone) {
+      return `zone-${zone || "unknown"}`;
+    }
+
+    function fmtRecovery(v) {
+      return v == null ? "—" : `${Math.round(v)}%`;
+    }
+
+    function fmtSleep(v) {
+      return v == null ? "—" : `${Number(v).toFixed(1)}h`;
+    }
+
+    function recoveryRing(pct, zone, size = 108) {
+      const r = (size - 10) / 2;
+      const cx = size / 2;
+      const circ = 2 * Math.PI * r;
+      const offset = pct != null ? circ - (Math.min(pct, 100) / 100) * circ : circ;
+      const display = pct != null ? Math.round(pct) : "—";
+      return `
+        <svg class="recovery-ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+          <circle class="ring-bg" cx="${cx}" cy="${cx}" r="${r}"/>
+          <circle class="ring-fill ${zoneClass(zone)}" cx="${cx}" cy="${cx}" r="${r}"
+            stroke-dasharray="${circ}" stroke-dashoffset="${offset}"
+            transform="rotate(-90 ${cx} ${cx})"/>
+          <text x="${cx}" y="${cx - 2}" text-anchor="middle" class="ring-center">${display}</text>
+          <text x="${cx}" y="${cx + 16}" text-anchor="middle" class="ring-center-sub">recovery</text>
+        </svg>
+        <div class="ring-label ${zoneClass(zone)}">${zone === "unknown" ? "No data" : zone.toUpperCase()}</div>`;
+    }
+
+    function metricPill(icon, value, label, zone) {
+      return `
+        <div class="metric-pill">
+          <div class="metric-pill-icon">${icon}</div>
+          <div class="metric-pill-value ${zone || ""}">${value}</div>
+          <div class="metric-pill-label">${label}</div>
+        </div>`;
+    }
+
+    function showToast(msg) {
+      const t = $("#toast");
+      t.textContent = msg;
+      t.classList.add("show");
+      setTimeout(() => t.classList.remove("show"), 3500);
+    }
+
+    function renderBriefing(briefing) {
+      if (!briefing) return;
+      const b = briefing;
+      const hero = $("#hero-section");
+      const heroZone = b.planned_session === "OFF" && !b.already_done ? "rest" : (b.recovery_zone || "unknown");
+      hero.className = `hero ${zoneClass(heroZone)}`;
+
+      $("#briefing-date").textContent = `${b.weekday} · ${b.date}`;
+      $("#briefing-headline").textContent = b.headline;
+
+      const u = b.user || {};
+      const userParts = [];
+      if (u.weight_kg) userParts.push(`${u.weight_kg} kg`);
+      if (u.goal) userParts.push(u.goal);
+      $("#briefing-user").textContent = userParts.join(" · ");
+
+      $("#briefing-recovery").innerHTML = recoveryRing(b.recovery, b.recovery_zone);
+      $("#briefing-action").textContent = b.action;
+
+      const mods = (b.modifications || []).slice(b.mode === "pre_gym" ? 1 : 0);
+      $("#briefing-mods").innerHTML = mods.map((m) => `<li>${m}</li>`).join("");
+
+      $("#briefing-yesterday").textContent = b.yesterday ? b.yesterday.message : "";
+      $("#briefing-protein").textContent = b.protein ? b.protein.message : "";
+
+      const staleEl = $("#briefing-stale");
+      if (b.whoop_stale_days != null && b.whoop_stale_days > 0) {
+        staleEl.textContent = `⚠ Whoop data is ${b.whoop_stale_days} day(s) old — upload fresh export`;
+        staleEl.style.display = "inline-flex";
+      } else {
+        staleEl.style.display = "none";
+      }
+
+      renderSessionComparison(b.last_session_comparison, b.session_note, b.mode, b.next_session);
+    }
+
+    function renderSessionComparison(comp, sessionNote, mode, nextSession) {
+      const el = $("#session-comparison");
+      let html = "";
+
+      if (nextSession) {
+        html += `<p class="session-note"><strong>Up next</strong> · ${nextSession.weekday} — ${nextSession.session}</p>`;
+      }
+      if (sessionNote && (nextSession || mode === "pre_gym")) {
+        html += `<p class="session-note">${sessionNote}</p>`;
+      }
+
+      if (!comp) {
+        el.innerHTML = html ? `<div class="comparison-block">${html}</div>` : "";
+        return;
+      }
+
+      if (!comp.last_date && comp.message) {
+        html += `<p class="empty">${comp.message}</p>`;
+        el.innerHTML = `<div class="comparison-block">${html}</div>`;
+        return;
+      }
+
+      const title = comp.today_already_done
+        ? `Today vs last ${comp.planned}`
+        : `Last ${comp.planned} · ${comp.last_date}`;
+
+      html += `<div class="comparison-title">${title}</div>`;
+      if (comp.duration_min) {
+        html += `<p class="empty" style="margin-bottom:0.65rem;">${comp.duration_min} min · ${Math.round(comp.total_volume || 0)} vol</p>`;
+      }
+
+      if (comp.exercises?.length) {
+        html += `<div class="exercise-cards">`;
+        html += comp.exercises.map((ex) => `
+          <div class="exercise-card">
+            <div class="exercise-card-name">${ex.exercise_name}</div>
+            <div class="exercise-card-last">Last <strong>${ex.last_top_set}</strong></div>
+            <div class="exercise-card-target">${ex.target_today}</div>
+          </div>
+        `).join("");
+        html += `</div>`;
+      }
+
+      if (comp.today_already_done && comp.today_exercises?.length) {
+        html += `<div class="comparison-title" style="margin-top:1rem;">Logged today</div>`;
+        html += `<div class="exercise-cards">`;
+        html += comp.today_exercises.map((ex) => `
+          <div class="exercise-card">
+            <div class="exercise-card-name">${ex.exercise_name}</div>
+            <div class="exercise-card-last"><strong>${ex.top_set}</strong></div>
+          </div>
+        `).join("");
+        html += `</div>`;
+      }
+
+      el.innerHTML = `<div class="comparison-block">${html}</div>`;
+    }
+
+    function renderMetrics(report, briefing) {
+      const t = report.today;
+      const s = report.summary;
+      $("#metric-row").innerHTML = [
+        metricPill("🏋️", t.planned_session, "Today's plan"),
+        metricPill("😴", fmtSleep(t.sleep_hours), "Sleep"),
+        metricPill("💚", t.hrv != null ? `${Math.round(t.hrv)} ms` : "—", "HRV"),
+        metricPill("📊", s.gym_sessions, "Sessions (14d)"),
+      ].join("");
+    }
+
+    function renderOverview(report) {
+      const t = report.today;
+      const s = report.summary;
+      $("#overview-stats").innerHTML = `
+        <div class="stat-box">
+          <div class="stat-value ${zoneClass(t.recovery_zone)}">${fmtRecovery(t.recovery)}</div>
+          <div class="stat-label">Recovery</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">${fmtSleep(t.sleep_hours)}</div>
+          <div class="stat-label">Sleep</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">${s.avg_recovery != null ? s.avg_recovery + "%" : "—"}</div>
+          <div class="stat-label">Avg recovery</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">${s.avg_sleep_hours != null ? s.avg_sleep_hours + "h" : "—"}</div>
+          <div class="stat-label">Avg sleep</div>
+        </div>`;
+      $("#today-recommendation").textContent = t.recommendation;
+    }
+
+    function renderToday(report) {
+      $("#generated-at").textContent = new Date(report.generated_at).toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+      }) + " IST";
+    }
+
+    function renderWeek(week) {
+      $("#week-strip").innerHTML = week.map((d) => {
+        const rec = d.recovery != null
+          ? `<span class="recovery-pill ${zoneClass(d.recovery_zone)}">${Math.round(d.recovery)}%</span>`
+          : "";
+        const actual = d.actual ? `<div class="actual">${d.actual}</div>` : "";
+        return `
+          <div class="day-card status-${d.status} ${d.is_today ? "today" : ""} ${d.actual ? "clickable" : ""}"
+               data-date="${d.date}" ${d.actual ? 'data-has-workout="1"' : ""}>
+            <div class="weekday">${d.weekday}</div>
+            <div class="date-num">${d.date.slice(8)}</div>
+            <div class="planned">${d.planned}</div>
+            ${actual}
+            ${rec}
+            <div class="status-dot"></div>
+          </div>`;
+      }).join("");
+
+      document.querySelectorAll(".day-card[data-has-workout]").forEach((el) => {
+        el.addEventListener("click", () => openWorkout(el.dataset.date));
+      });
+    }
+
+    function renderDailyLog(report, week, schedule) {
+      const plannedMap = Object.fromEntries(week.map((d) => [d.date, d.planned]));
+      const weekdayPlan = { ...schedule };
+      const rows = [...report.daily_log].reverse();
+      $("#daily-log").innerHTML = rows.map((row) => {
+        const dayName = new Date(row.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
+        const planned = plannedMap[row.date] || weekdayPlan[dayName] || "";
+        const zone = row.recovery >= 67 ? "green" : row.recovery >= 50 ? "yellow" : row.recovery != null ? "red" : "unknown";
+        return `
+          <tr class="${row.jefit_session ? "clickable" : ""}" data-date="${row.date}">
+            <td>${row.date.slice(5)}</td>
+            <td class="${zoneClass(zone)}">${fmtRecovery(row.recovery)}</td>
+            <td>${fmtSleep(row.sleep_hours)}</td>
+            <td>${row.jefit_session || "—"}</td>
+            <td>${planned}</td>
+          </tr>`;
+      }).join("");
+
+      document.querySelectorAll("#daily-log tr.clickable").forEach((tr) => {
+        tr.addEventListener("click", () => openWorkout(tr.dataset.date));
+      });
+    }
+
+    function renderInsights(report) {
+      const items = report.insights || [];
+      const levelClass = { warn: "insight-warn", info: "insight-info", good: "insight-good" };
+      const levelIcon = { warn: "!", info: "i", good: "✓" };
+      $("#insights-list").innerHTML = items.length
+        ? items.map((i) => {
+            const text = typeof i === "string" ? i : i.text;
+            const level = typeof i === "string" ? "info" : (i.level || "info");
+            const category = typeof i === "string" ? "" : (i.category || "");
+            return `<li class="${levelClass[level] || "insight-info"}">
+              <span class="insight-badge">${levelIcon[level] || "i"}</span>
+              <span class="insight-body">
+                ${category ? `<span class="insight-cat">${category}</span><br>` : ""}
+                ${text}
+              </span>
+            </li>`;
+          }).join("")
+        : '<li class="empty">Import Jefit + Whoop data for coaching insights.</li>';
+    }
+
+    function renderLastWorkout(latest) {
+      if (!latest) {
+        $("#last-workout").innerHTML = '<p class="empty">No workouts yet — upload Jefit export.</p>';
+        return;
+      }
+      const s = latest.session;
+      const exercises = latest.exercises.map((ex) => `
+        <li><span>${ex.exercise_name}</span><span class="exercise-logs">${ex.logs}</span></li>
+      `).join("");
+      $("#last-workout").innerHTML = `
+        <div class="workout-header">
+          <div class="workout-badge">🏋️</div>
+          <div class="workout-meta">
+            <h3>${s.day_name || "Workout"}</h3>
+            <p>${s.date} · ${s.duration_min} min · ${s.exercise_count} exercises</p>
+          </div>
+        </div>
+        <ul class="exercise-list">${exercises}</ul>`;
+    }
+
+    function renderImports(imports) {
+      if (!imports.length) {
+        $("#import-log").innerHTML = '<p class="empty">No imports yet.</p>';
+        return;
+      }
+      $("#import-log").innerHTML = imports.slice(0, 5).map((row) => `
+        <div>${row.source}: ${row.file_path.split(/[/\\\\]/).pop()} · ${row.records} records</div>
+      `).join("");
+    }
+
+    async function openWorkout(date) {
+      const res = await fetch(`/api/workout/${date}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      $("#modal-title").textContent = `${date} — ${data.session.day_name || "Workout"}`;
+      const whoop = data.whoop;
+      const whoopHtml = whoop
+        ? `<p class="empty">Recovery ${fmtRecovery(whoop.recovery)} · Sleep ${fmtSleep(whoop.sleep_hours)}</p>`
+        : "";
+      const exercises = data.exercises.map((ex) => `
+        <li><span>${ex.exercise_name}</span><span class="exercise-logs">${ex.logs}</span></li>
+      `).join("");
+      $("#modal-body").innerHTML = `
+        ${whoopHtml}
+        <p class="empty">${data.session.duration_min} min session</p>
+        <ul class="exercise-list">${exercises}</ul>`;
+      $("#modal").classList.add("open");
+    }
+
+    async function loadDashboard() {
+      $("#loading").style.display = "block";
+      $("#content").style.display = "none";
+      try {
+        const res = await fetch("/api/dashboard?days=14");
+        const data = await res.json();
+        renderBriefing(data.briefing);
+        renderToday(data.report);
+        renderMetrics(data.report, data.briefing);
+        renderOverview(data.report);
+        renderWeek(data.week);
+        renderDailyLog(data.report, data.week, data.schedule);
+        renderInsights(data.report);
+        renderLastWorkout(data.latest_workout);
+        renderImports(data.imports);
+        $("#loading").style.display = "none";
+        const content = $("#content");
+        content.style.display = "block";
+        content.classList.remove("content-fade");
+        void content.offsetWidth;
+        content.classList.add("content-fade");
+      } catch (err) {
+        $("#loading").innerHTML = '<p>Failed to load. Upload Jefit and Whoop files above.</p>';
+      }
+    }
+
+    async function uploadFile(endpoint, file, statusEl) {
+      const form = new FormData();
+      form.append("file", file);
+      statusEl.textContent = "…";
+      statusEl.className = "upload-status loading";
+      try {
+        const res = await fetch(endpoint, { method: "POST", body: form });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.error || "Upload failed");
+        statusEl.textContent = "✓";
+        statusEl.className = "upload-status success";
+        showToast(`Imported ${data.filename}`);
+        await loadDashboard();
+      } catch (err) {
+        statusEl.textContent = "✗";
+        statusEl.className = "upload-status error";
+        showToast(err.message || "Upload failed");
+      }
+    }
+
+    $("#jefit-file").addEventListener("change", (e) => {
+      if (e.target.files[0]) uploadFile("/api/upload/jefit", e.target.files[0], $("#jefit-status"));
+      e.target.value = "";
+    });
+    $("#whoop-file").addEventListener("change", (e) => {
+      if (e.target.files[0]) uploadFile("/api/upload/whoop", e.target.files[0], $("#whoop-status"));
+      e.target.value = "";
+    });
+    $("#btn-refresh").addEventListener("click", loadDashboard);
+    $("#modal-close").addEventListener("click", () => $("#modal").classList.remove("open"));
+    $("#modal").addEventListener("click", (e) => {
+      if (e.target === $("#modal")) $("#modal").classList.remove("open");
+    });
+
+    initThemeToggle();
+    loadDashboard();
+  </script>
+</body>
+</html>
