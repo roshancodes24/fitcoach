@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#05070c">
+  <title>FitCoach — Orbit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --text: #f4f6fa;
+      --text-secondary: #9aa8bc;
+      --text-muted: #6b7a90;
+      --glass: rgba(16, 22, 32, 0.55);
+      --glass-border: rgba(255, 255, 255, 0.09);
+      --green: #34d399;
+      --yellow: #fbbf24;
+      --red: #f87171;
+      --blue: #60a5fa;
+      --accent: #fb923c;
+      --purple: #a78bfa;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: #05070c;
+      font-family: "Inter", system-ui, sans-serif;
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #scene {
+      position: fixed;
+      inset: 0;
+      display: block;
+      touch-action: none;
+    }
+
+    /* ── Overlay chrome ── */
+    .hud {
+      position: fixed;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .hud > * { pointer-events: auto; }
+
+    .hud-top {
+      top: 0; left: 0; right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.25rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .brand-icon {
+      width: 34px; height: 34px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), #ea580c);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.95rem;
+      box-shadow: 0 0 18px rgba(251, 146, 60, 0.45);
+    }
+
+    .brand h1 { font-size: 0.95rem; font-weight: 700; letter-spacing: -0.01em; }
+    .brand p { font-size: 0.68rem; color: var(--text-muted); }
+
+    .hud-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.5rem 0.9rem;
+      border-radius: 12px;
+      border: 1px solid var(--glass-border);
+      background: var(--glass);
+      backdrop-filter: blur(14px);
+      color: var(--text-secondary);
+      font-size: 0.78rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .hud-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+
+    /* Left metric stack */
+    .hud-left {
+      left: 1.25rem;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      max-width: 190px;
+    }
+
+    .metric {
+      background: var(--glass);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      padding: 0.65rem 0.85rem;
+      transition: transform 0.25s ease, border-color 0.25s ease;
+    }
+
+    .metric:hover { transform: translateX(4px); border-color: rgba(255,255,255,0.18); }
+
+    .metric-value {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+    }
+
+    .metric-label {
+      font-size: 0.6rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-top: 0.1rem;
+    }
+
+    /* Recovery number pinned to core */
+    .core-label {
+      position: fixed;
+      z-index: 5;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .core-value {
+      font-size: 2.6rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      text-shadow: 0 0 24px rgba(0, 0, 0, 0.7);
+    }
+
+    .core-sub {
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--text-secondary);
+      margin-top: 0.3rem;
+    }
+
+    /* Day planet labels */
+    .planet-label {
+      position: fixed;
+      z-index: 4;
+      transform: translate(-50%, -130%);
+      pointer-events: none;
+      text-align: center;
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+      background: rgba(8, 11, 17, 0.55);
+      backdrop-filter: blur(6px);
+      border: 1px solid var(--glass-border);
+      padding: 0.22rem 0.5rem;
+      border-radius: 999px;
+      white-space: nowrap;
+      transition: opacity 0.15s ease;
+    }
+
+    .planet-label .pl-session { color: var(--text); }
+    .planet-label.is-today { border-color: rgba(251, 146, 60, 0.55); color: var(--accent); }
+
+    /* Bottom briefing bar */
+    .hud-bottom {
+      left: 50%;
+      bottom: 1.25rem;
+      transform: translateX(-50%);
+      width: min(680px, calc(100vw - 2rem));
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .briefing-bar {
+      width: 100%;
+      background: var(--glass);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: 18px;
+      padding: 0.85rem 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+    }
+
+    .briefing-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      box-shadow: 0 0 12px currentColor;
+    }
+
+    .briefing-text h2 { font-size: 0.9rem; font-weight: 700; letter-spacing: -0.01em; }
+    .briefing-text p { font-size: 0.76rem; color: var(--text-secondary); margin-top: 0.15rem; }
+
+    .hint {
+      font-size: 0.64rem;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+    }
+
+    /* Right detail panel */
+    .panel {
+      position: fixed;
+      z-index: 20;
+      top: 0; right: 0; bottom: 0;
+      width: min(360px, 92vw);
+      background: rgba(10, 14, 21, 0.88);
+      backdrop-filter: blur(20px);
+      border-left: 1px solid var(--glass-border);
+      padding: 1.4rem 1.25rem;
+      overflow-y: auto;
+      transform: translateX(105%);
+      transition: transform 0.35s cubic-bezier(0.3, 0.9, 0.3, 1);
+    }
+
+    .panel.open { transform: translateX(0); }
+
+    .panel-close {
+      float: right;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 10px;
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      font-weight: 600;
+      font-family: inherit;
+      padding: 0.35rem 0.75rem;
+      cursor: pointer;
+    }
+
+    .panel h3 { font-size: 1.05rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 0.2rem; }
+    .panel .panel-sub { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem; }
+
+    .chip {
+      display: inline-block;
+      font-size: 0.62rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.25rem 0.6rem;
+      border-radius: 999px;
+      margin-bottom: 0.9rem;
+    }
+
+    .panel-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .panel-stat {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      padding: 0.6rem 0.7rem;
+    }
+
+    .panel-stat b { font-size: 1rem; font-weight: 800; display: block; }
+    .panel-stat span { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+
+    .ex-list { list-style: none; }
+    .ex-list li {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.55rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 0.8rem;
+    }
+    .ex-list li:last-child { border-bottom: none; }
+    .ex-logs { color: var(--text-muted); font-size: 0.7rem; text-align: right; }
+
+    /* Insights drawer */
+    .drawer-toggle {
+      position: fixed;
+      z-index: 15;
+      right: 1.25rem;
+      bottom: 1.25rem;
+    }
+
+    .drawer {
+      position: fixed;
+      z-index: 19;
+      right: 1.25rem;
+      bottom: 4.4rem;
+      width: min(340px, 90vw);
+      max-height: 55vh;
+      overflow-y: auto;
+      background: rgba(10, 14, 21, 0.9);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 18px;
+      padding: 1rem;
+      opacity: 0;
+      transform: translateY(12px) scale(0.98);
+      pointer-events: none;
+      transition: all 0.25s ease;
+    }
+
+    .drawer.open { opacity: 1; transform: none; pointer-events: auto; }
+
+    .drawer h4 {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 0.6rem;
+    }
+
+    .drawer ul { list-style: none; display: flex; flex-direction: column; gap: 0.45rem; }
+
+    .drawer li {
+      display: flex;
+      gap: 0.6rem;
+      font-size: 0.76rem;
+      line-height: 1.45;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      padding: 0.6rem 0.7rem;
+    }
+
+    .ins-badge {
+      flex-shrink: 0;
+      width: 22px; height: 22px;
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.65rem; font-weight: 800;
+    }
+
+    .ins-warn { background: rgba(248,113,113,0.15); color: var(--red); }
+    .ins-info { background: rgba(96,165,250,0.15); color: var(--blue); }
+    .ins-good { background: rgba(52,211,153,0.15); color: var(--green); }
+
+    /* Loading */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: #05070c;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      transition: opacity 0.5s ease;
+    }
+
+    .loading-overlay.hide { opacity: 0; pointer-events: none; }
+
+    .loader {
+      width: 42px; height: 42px;
+      border: 3px solid rgba(255,255,255,0.1);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-overlay p { font-size: 0.8rem; color: var(--text-muted); }
+
+    .zone-green { color: var(--green); }
+    .zone-yellow { color: var(--yellow); }
+    .zone-red { color: var(--red); }
+    .zone-unknown { color: var(--text-muted); }
+
+    @media (max-width: 640px) {
+      .hud-left { display: none; }
+      .core-value { font-size: 2rem; }
+      .briefing-text h2 { font-size: 0.8rem; }
+    }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="scene"></canvas>
+
+  <div class="loading-overlay" id="loading">
+    <div class="loader"></div>
+    <p>Entering your training orbit…</p>
+  </div>
+
+  <div class="core-label" id="core-label" style="opacity:0;">
+    <div class="core-value" id="core-value">—</div>
+    <div class="core-sub">Recovery</div>
+  </div>
+
+  <header class="hud hud-top">
+    <div class="brand">
+      <div class="brand-icon">💪</div>
+      <div>
+        <h1>FitCoach Orbit</h1>
+        <p id="hud-date">—</p>
+      </div>
+    </div>
+    <a class="hud-btn" href="/">◱ Classic view</a>
+  </header>
+
+  <aside class="hud hud-left" id="hud-metrics"></aside>
+
+  <div class="hud hud-bottom">
+    <div class="briefing-bar">
+      <span class="briefing-dot" id="briefing-dot"></span>
+      <div class="briefing-text">
+        <h2 id="briefing-headline">—</h2>
+        <p id="briefing-action"></p>
+      </div>
+    </div>
+    <span class="hint">Drag to orbit · scroll to zoom · tap a planet for that day</span>
+  </div>
+
+  <button class="hud-btn drawer-toggle" id="drawer-toggle">✦ Insights</button>
+  <div class="drawer" id="drawer">
+    <h4>Coaching Insights</h4>
+    <ul id="drawer-list"></ul>
+  </div>
+
+  <aside class="panel" id="panel">
+    <button class="panel-close" id="panel-close">Close</button>
+    <h3 id="panel-title">—</h3>
+    <p class="panel-sub" id="panel-sub"></p>
+    <span class="chip" id="panel-chip"></span>
+    <div class="panel-stats" id="panel-stats"></div>
+    <ul class="ex-list" id="panel-exercises"></ul>
+  </aside>
+
+  <script type="module">
+    import * as THREE from "three";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+    const ZONE_COLORS = {
+      green: 0x34d399,
+      yellow: 0xfbbf24,
+      red: 0xf87171,
+      unknown: 0x64748b,
+    };
+
+    const STATUS_COLORS = {
+      done: 0x34d399,
+      missed: 0xf87171,
+      today: 0xfb923c,
+      rest: 0x475569,
+      upcoming: 0x60a5fa,
+      extra: 0xa78bfa,
+    };
+
+    const STATUS_TEXT = {
+      done: "Completed",
+      missed: "Missed",
+      today: "Today",
+      rest: "Rest day",
+      upcoming: "Upcoming",
+      extra: "Extra session",
+    };
+
+    const $ = (s) => document.querySelector(s);
+    const canvas = $("#scene");
+
+    // ── Renderer / scene / camera ──
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x05070c);
+    scene.fog = new THREE.Fog(0x05070c, 14, 30);
+
+    const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 100);
+    camera.position.set(0, 3.4, 9.5);
+
+    const controls = new OrbitControls(camera, canvas);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.enablePan = false;
+    controls.minDistance = 5;
+    controls.maxDistance = 16;
+    controls.minPolarAngle = 0.35;
+    controls.maxPolarAngle = 1.35;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.5;
+
+    let idleTimer = null;
+    controls.addEventListener("start", () => {
+      controls.autoRotate = false;
+      clearTimeout(idleTimer);
+    });
+    controls.addEventListener("end", () => {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => (controls.autoRotate = true), 9000);
+    });
+
+    // ── Lights ──
+    scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+    const coreLight = new THREE.PointLight(0x64748b, 60, 40);
+    coreLight.position.set(0, 0, 0);
+    scene.add(coreLight);
+    const rim = new THREE.DirectionalLight(0x60a5fa, 0.6);
+    rim.position.set(-6, 8, -4);
+    scene.add(rim);
+
+    // ── Starfield ──
+    {
+      const count = 1400;
+      const positions = new Float32Array(count * 3);
+      for (let i = 0; i < count; i++) {
+        const r = 18 + Math.random() * 26;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+        positions[i * 3 + 1] = r * Math.cos(phi) * 0.6;
+        positions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      const stars = new THREE.Points(geo, new THREE.PointsMaterial({
+        color: 0x9aa8bc, size: 0.05, sizeAttenuation: true, transparent: true, opacity: 0.75,
+      }));
+      stars.name = "stars";
+      scene.add(stars);
+    }
+
+    // ── Glow sprite helper ──
+    function makeGlowTexture() {
+      const c = document.createElement("canvas");
+      c.width = c.height = 256;
+      const ctx = c.getContext("2d");
+      const g = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+      g.addColorStop(0, "rgba(255,255,255,0.85)");
+      g.addColorStop(0.35, "rgba(255,255,255,0.25)");
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 256, 256);
+      return new THREE.CanvasTexture(c);
+    }
+    const glowTex = makeGlowTexture();
+
+    function makeGlow(colorHex, scale) {
+      const mat = new THREE.SpriteMaterial({
+        map: glowTex, color: colorHex, transparent: true,
+        blending: THREE.AdditiveBlending, depthWrite: false,
+      });
+      const s = new THREE.Sprite(mat);
+      s.scale.setScalar(scale);
+      return s;
+    }
+
+    // ── Recovery core ──
+    const coreGroup = new THREE.Group();
+    scene.add(coreGroup);
+
+    const coreMat = new THREE.MeshStandardMaterial({
+      color: 0x111827, emissive: 0x64748b, emissiveIntensity: 1.1,
+      roughness: 0.25, metalness: 0.1,
+    });
+    const core = new THREE.Mesh(new THREE.SphereGeometry(1.05, 48, 48), coreMat);
+    coreGroup.add(core);
+    const coreGlow = makeGlow(0x64748b, 5.2);
+    coreGroup.add(coreGlow);
+
+    // Recovery progress ring (horizontal)
+    const ringGroup = new THREE.Group();
+    ringGroup.rotation.x = -Math.PI / 2;
+    coreGroup.add(ringGroup);
+
+    const trackMesh = new THREE.Mesh(
+      new THREE.TorusGeometry(2.0, 0.03, 12, 120),
+      new THREE.MeshBasicMaterial({ color: 0x1c2432 })
+    );
+    ringGroup.add(trackMesh);
+    let arcMesh = null;
+
+    // Decorative tilted gyro ring
+    const gyro = new THREE.Mesh(
+      new THREE.TorusGeometry(2.7, 0.015, 8, 140),
+      new THREE.MeshBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0.35 })
+    );
+    gyro.rotation.set(Math.PI / 3, 0.4, 0);
+    coreGroup.add(gyro);
+
+    // ── Week orbit ──
+    const ORBIT_R = 4.6;
+    const orbitGroup = new THREE.Group();
+    scene.add(orbitGroup);
+
+    // faint orbit line
+    {
+      const pts = [];
+      for (let i = 0; i <= 128; i++) {
+        const a = (i / 128) * Math.PI * 2;
+        pts.push(new THREE.Vector3(Math.cos(a) * ORBIT_R, 0, Math.sin(a) * ORBIT_R));
+      }
+      const line = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(pts),
+        new THREE.LineBasicMaterial({ color: 0x2d3a4f, transparent: true, opacity: 0.6 })
+      );
+      scene.add(line);
+    }
+
+    const planets = [];
+    const planetLabels = [];
+
+    function buildWeek(week) {
+      week.forEach((day, i) => {
+        const angle = (i / 7) * Math.PI * 2 - Math.PI / 2;
+        const color = STATUS_COLORS[day.status] ?? 0x475569;
+        const isToday = !!day.is_today;
+        const radius = isToday ? 0.34 : day.actual ? 0.3 : 0.24;
+
+        const mesh = new THREE.Mesh(
+          new THREE.SphereGeometry(radius, 32, 32),
+          new THREE.MeshStandardMaterial({
+            color: 0x0e1219, emissive: color,
+            emissiveIntensity: day.status === "rest" ? 0.5 : 1.0,
+            roughness: 0.35,
+          })
+        );
+        mesh.position.set(Math.cos(angle) * ORBIT_R, 0, Math.sin(angle) * ORBIT_R);
+        mesh.userData = { day, baseScale: 1, angle, index: i };
+        orbitGroup.add(mesh);
+        planets.push(mesh);
+
+        const glow = makeGlow(color, isToday ? 2.2 : 1.4);
+        mesh.add(glow);
+
+        const label = document.createElement("div");
+        label.className = "planet-label" + (isToday ? " is-today" : "");
+        label.innerHTML = `${day.weekday} ${day.date.slice(8)} · <span class="pl-session">${day.actual || day.planned}</span>`;
+        document.body.appendChild(label);
+        planetLabels.push(label);
+      });
+    }
+
+    // ── Data → HUD ──
+    let weekData = [];
+
+    function zoneClassName(zone) { return `zone-${zone || "unknown"}`; }
+    function fmtSleep(v) { return v == null ? "—" : `${Number(v).toFixed(1)}h`; }
+
+    function applyData(data) {
+      const b = data.briefing || {};
+      const report = data.report || {};
+      const zone = b.recovery_zone || "unknown";
+      const zoneColor = ZONE_COLORS[zone] ?? ZONE_COLORS.unknown;
+
+      // Core visuals
+      coreMat.emissive.setHex(zoneColor);
+      coreGlow.material.color.setHex(zoneColor);
+      coreLight.color.setHex(zoneColor);
+
+      const pct = b.recovery != null ? Math.min(b.recovery, 100) : 0;
+      if (arcMesh) ringGroup.remove(arcMesh);
+      if (pct > 0) {
+        arcMesh = new THREE.Mesh(
+          new THREE.TorusGeometry(2.0, 0.06, 14, 120, (pct / 100) * Math.PI * 2),
+          new THREE.MeshBasicMaterial({ color: zoneColor })
+        );
+        ringGroup.add(arcMesh);
+      }
+
+      // Core label
+      $("#core-value").textContent = b.recovery != null ? `${Math.round(b.recovery)}%` : "—";
+      $("#core-value").className = `core-value ${zoneClassName(zone)}`;
+      $("#core-label").style.opacity = 1;
+
+      // Top date
+      $("#hud-date").textContent = `${b.weekday || ""} · ${b.date || ""}`;
+
+      // Briefing bar
+      $("#briefing-headline").textContent = b.headline || "Upload data to begin";
+      $("#briefing-action").textContent = b.action || "";
+      const dot = $("#briefing-dot");
+      dot.style.color = `#${zoneColor.toString(16).padStart(6, "0")}`;
+      dot.style.background = "currentColor";
+
+      // Metrics
+      const t = report.today || {};
+      const s = report.summary || {};
+      $("#hud-metrics").innerHTML = [
+        ["Plan", t.planned_session ?? "—"],
+        ["Sleep", fmtSleep(t.sleep_hours)],
+        ["HRV", t.hrv != null ? `${Math.round(t.hrv)} ms` : "—"],
+        ["Sessions · 14d", s.gym_sessions ?? "—"],
+        ["Avg recovery", s.avg_recovery != null ? `${s.avg_recovery}%` : "—"],
+      ].map(([label, value]) => `
+        <div class="metric">
+          <div class="metric-value">${value}</div>
+          <div class="metric-label">${label}</div>
+        </div>`).join("");
+
+      // Insights drawer
+      const ICON = { warn: "!", info: "i", good: "✓" };
+      const items = report.insights || [];
+      $("#drawer-list").innerHTML = items.length
+        ? items.map((i) => {
+            const level = i.level || "info";
+            return `<li><span class="ins-badge ins-${level}">${ICON[level] || "i"}</span><span>${i.text || i}</span></li>`;
+          }).join("")
+        : "<li>No insights yet — upload Jefit + Whoop data.</li>";
+
+      // Week planets
+      weekData = data.week || [];
+      buildWeek(weekData);
+    }
+
+    // ── Day detail panel ──
+    const panel = $("#panel");
+
+    async function openDay(day) {
+      $("#panel-title").textContent = `${day.weekday_full} · ${day.date.slice(5)}`;
+      $("#panel-sub").textContent = day.actual
+        ? `Logged: ${day.actual}` : `Planned: ${day.planned}`;
+
+      const chip = $("#panel-chip");
+      const cHex = (STATUS_COLORS[day.status] ?? 0x475569).toString(16).padStart(6, "0");
+      chip.textContent = STATUS_TEXT[day.status] || day.status;
+      chip.style.background = `#${cHex}22`;
+      chip.style.color = `#${cHex}`;
+
+      $("#panel-stats").innerHTML = `
+        <div class="panel-stat"><b class="${zoneClassName(day.recovery_zone)}">${day.recovery != null ? Math.round(day.recovery) + "%" : "—"}</b><span>Recovery</span></div>
+        <div class="panel-stat"><b>${fmtSleep(day.sleep_hours)}</b><span>Sleep</span></div>
+        <div class="panel-stat"><b>${day.hrv != null ? Math.round(day.hrv) + " ms" : "—"}</b><span>HRV</span></div>
+        <div class="panel-stat"><b>${day.planned}</b><span>Planned</span></div>`;
+
+      const list = $("#panel-exercises");
+      list.innerHTML = "";
+      if (day.actual) {
+        list.innerHTML = "<li>Loading workout…</li>";
+        try {
+          const res = await fetch(`/api/workout/${day.date}`);
+          if (res.ok) {
+            const detail = await res.json();
+            list.innerHTML = detail.exercises.map((ex) =>
+              `<li><span>${ex.exercise_name}</span><span class="ex-logs">${ex.logs || ""}</span></li>`
+            ).join("");
+          } else {
+            list.innerHTML = "";
+          }
+        } catch { list.innerHTML = ""; }
+      }
+      panel.classList.add("open");
+    }
+
+    $("#panel-close").addEventListener("click", () => panel.classList.remove("open"));
+
+    // ── Insights drawer toggle ──
+    $("#drawer-toggle").addEventListener("click", () => $("#drawer").classList.toggle("open"));
+
+    // ── Picking ──
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    let hovered = null;
+    let downAt = null;
+
+    function setPointer(e) {
+      pointer.x = (e.clientX / innerWidth) * 2 - 1;
+      pointer.y = -(e.clientY / innerHeight) * 2 + 1;
+    }
+
+    canvas.addEventListener("pointermove", (e) => {
+      setPointer(e);
+      raycaster.setFromCamera(pointer, camera);
+      const hit = raycaster.intersectObjects(planets, false)[0];
+      const target = hit ? hit.object : null;
+      if (hovered !== target) {
+        hovered = target;
+        canvas.style.cursor = hovered ? "pointer" : "grab";
+      }
+    });
+
+    canvas.addEventListener("pointerdown", (e) => { downAt = [e.clientX, e.clientY]; });
+    canvas.addEventListener("pointerup", (e) => {
+      if (!downAt) return;
+      const moved = Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]);
+      downAt = null;
+      if (moved > 6) return; // was a drag
+      setPointer(e);
+      raycaster.setFromCamera(pointer, camera);
+      const hit = raycaster.intersectObjects(planets, false)[0];
+      if (hit) openDay(hit.object.userData.day);
+    });
+
+    // ── Label projection ──
+    const workVec = new THREE.Vector3();
+
+    function projectLabels() {
+      // Core label
+      workVec.set(0, 0, 0).project(camera);
+      const cl = $("#core-label");
+      cl.style.left = `${(workVec.x * 0.5 + 0.5) * innerWidth}px`;
+      cl.style.top = `${(-workVec.y * 0.5 + 0.5) * innerHeight}px`;
+
+      planets.forEach((p, i) => {
+        p.getWorldPosition(workVec);
+        workVec.y += 0.45;
+        workVec.project(camera);
+        const label = planetLabels[i];
+        const behind = workVec.z > 1;
+        label.style.opacity = behind ? 0 : 1;
+        label.style.left = `${(workVec.x * 0.5 + 0.5) * innerWidth}px`;
+        label.style.top = `${(-workVec.y * 0.5 + 0.5) * innerHeight}px`;
+      });
+    }
+
+    // ── Animate ──
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+
+      const pulse = 1 + Math.sin(t * 1.8) * 0.035;
+      core.scale.setScalar(pulse);
+      coreGlow.scale.setScalar(5.2 * pulse);
+
+      gyro.rotation.z = t * 0.15;
+      orbitGroup.rotation.y = t * 0.05;
+
+      planets.forEach((p, i) => {
+        p.position.y = Math.sin(t * 0.9 + i * 1.3) * 0.18;
+        const targetScale = p === hovered ? 1.45 : 1;
+        p.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.12);
+      });
+
+      const stars = scene.getObjectByName("stars");
+      if (stars) stars.rotation.y = t * 0.004;
+
+      controls.update();
+      renderer.render(scene, camera);
+      projectLabels();
+    }
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    // ── Boot ──
+    (async () => {
+      try {
+        const res = await fetch("/api/dashboard?days=14");
+        const data = await res.json();
+        applyData(data);
+      } catch {
+        $("#briefing-headline").textContent = "Could not load data";
+        $("#briefing-action").textContent = "Check the server, then refresh.";
+      }
+      $("#loading").classList.add("hide");
+      animate();
+    })();
+  </script>
+</body>
+</html>

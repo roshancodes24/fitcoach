@@ -58,6 +58,13 @@ def create_app(db_path: Path | None = None, config_path: Path | None = None) -> 
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         return response
 
+    @app.get("/immersive")
+    def immersive():
+        from flask import make_response
+        response = make_response(render_template("immersive.html"))
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        return response
+
     @app.get("/api/dashboard")
     def api_dashboard():
         days = request.args.get("days", 14, type=int)

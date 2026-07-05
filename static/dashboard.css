@@ -222,6 +222,8 @@ body::before {
   align-items: center;
   justify-content: center;
   transition: var(--transition);
+  text-decoration: none;
+  font-size: 0.95rem;
 }
 
 .btn-icon:hover {
