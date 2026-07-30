@@ -27,6 +27,46 @@ def _recovery_zone(recovery: float | None, thresholds: dict[str, int]) -> str:
     return "red"
 
 
+def _nutrition_settings(config: dict[str, Any]) -> dict[str, Any]:
+    nutrition = config.get("nutrition", {})
+    user = config.get("user", {})
+    protein = nutrition.get("protein_target_g")
+    if protein is None:
+        protein = user.get("protein_target_g", 110)
+    carbs = nutrition.get("carb_strategy") or {}
+    return {
+        "protein_target_g": protein,
+        "calorie_target": nutrition.get("calorie_target"),
+        "meals_per_day": nutrition.get("meals_per_day", 4),
+        "diet_notes": nutrition.get("diet_notes", ""),
+        "carb_gym": carbs.get("gym_days", "Higher carbs around training"),
+        "carb_off": carbs.get("off_days", "Lighter carbs — keep protein steady"),
+        "pre_workout": carbs.get("pre_workout", "Banana + protein powder before gym"),
+        "hydration_liters": nutrition.get("hydration_liters", 3.0),
+        "creatine_g": nutrition.get("creatine_g", 5),
+        "fiber_g": nutrition.get("fiber_g", 30),
+        "alcohol": nutrition.get(
+            "alcohol", "Minimize; avoid the night before training when possible"
+        ),
+    }
+
+
+def nutrition_day_tips(config: dict[str, Any], planned: str, already_done: bool = False) -> list[str]:
+    n = _nutrition_settings(config)
+    tips: list[str] = [
+        f"Protein ~{n['protein_target_g']} g across {n['meals_per_day']} meals today."
+    ]
+    if planned == "OFF":
+        tips.append(n["carb_off"])
+        tips.append(f"Alcohol: {n['alcohol']}")
+    else:
+        tips.append(n["carb_gym"])
+        if not already_done:
+            tips.append(f"Pre-workout: {n['pre_workout']}")
+    tips.append(f"Water ~{n['hydration_liters']:g} L · creatine {n['creatine_g']:g} g · fiber ~{n['fiber_g']} g.")
+    return tips
+
+
 def _weekday_name(d: date) -> str:
     return d.strftime("%A").lower()
 
@@ -121,12 +161,28 @@ def _insight(category: str, level: str, text: str) -> dict[str, str]:
 def _session_matches_planned(actual: str | None, planned: str) -> bool:
     if not actual or planned == "OFF":
         return planned == "OFF" and not actual
-    actual_l = actual.lower()
-    planned_l = planned.lower()
+    actual_l = " ".join(actual.lower().split())
+    planned_l = " ".join(planned.lower().split())
+
+    planned_parts = planned_l.split()
+    planned_token = planned_parts[0]
+    planned_variant = planned_parts[1] if len(planned_parts) > 1 else None
+    actual_parts = actual_l.split()
+    actual_variant = next((p for p in actual_parts[1:] if p in {"a", "b"}), None)
+
+    # Legs A vs Legs B (and similar) must match the letter when present
+    if planned_variant in {"a", "b"}:
+        if planned_token not in actual_l and not any(
+            planned_token in p for p in actual_parts
+        ):
+            return False
+        if actual_variant:
+            return actual_variant == planned_variant and planned_token in actual_l
+        # Generic labels like "legs" from exercise inference — not enough for A/B
+        return False
+
     if planned_l in actual_l or actual_l in planned_l:
         return True
-    # Match core tokens: "Legs A" -> "legs", "Push A" -> "push"
-    planned_token = planned_l.split()[0]
     return planned_token in actual_l
 
 
@@ -175,7 +231,9 @@ def _build_insights(
     missed: list[dict[str, str]],
 ) -> list[dict[str, str]]:
     insights: list[dict[str, str]] = []
-    protein_target = config.get("user", {}).get("protein_target_g", 140)
+    nutrition = _nutrition_settings(config)
+    protein_target = nutrition["protein_target_g"]
+    planned_today = _planned_session(config, date.fromisoformat(today_key))
     gym_days = [row for row in merged if row.get("jefit_session")]
     recoveries = [row["recovery"] for row in merged if row.get("recovery") is not None]
     sleep_hours = [row["sleep_hours"] for row in merged if row.get("sleep_hours") is not None]
@@ -362,27 +420,63 @@ def _build_insights(
     if missed:
         recent = missed[-3:]
         missed_str = "; ".join(f"{m['date']} ({m['planned']})" for m in recent)
+        adapt = config.get("adaptation_rules") or {}
+        adapt_note = adapt.get(
+            "summary",
+            "Adapt and suggest the plan ahead — don't blindly force the calendar.",
+        )
         insights.append(
             _insight(
                 "adherence",
                 "info",
-                f"Missed planned sessions: {missed_str}. Catch up only if recovery is green — don't stack fatigue.",
+                f"Missed planned sessions: {missed_str}. Catch up only if recovery is green — don't stack fatigue. {adapt_note}",
             )
         )
 
     wrong_day: list[str] = []
+    odd_off: list[str] = []
+    changed: list[str] = []
     for row in gym_days:
         d = date.fromisoformat(row["date"])
         planned = _planned_session(config, d)
         actual = row.get("jefit_session")
-        if planned != "OFF" and actual and not _session_matches_planned(actual, planned):
-            wrong_day.append(f"{row['date']}: did {actual}, planned {planned}")
+        if not actual:
+            continue
+        if planned == "OFF":
+            odd_off.append(f"{row['date']}: {actual} on OFF")
+        elif not _session_matches_planned(actual, planned):
+            if "new workout" in str(actual).lower():
+                changed.append(f"{row['date']}: {actual} (planned {planned})")
+            else:
+                wrong_day.append(f"{row['date']}: did {actual}, planned {planned}")
     if wrong_day:
         insights.append(
             _insight(
                 "adherence",
                 "info",
-                "Schedule drift: " + "; ".join(wrong_day[-2:]) + ". Fine during bridge weeks, but align to the 5-day block.",
+                "Schedule drift: "
+                + "; ".join(wrong_day[-2:])
+                + ". Adapt the plan ahead — realign to the weekly block without stacking catch-ups.",
+            )
+        )
+    if odd_off:
+        insights.append(
+            _insight(
+                "adherence",
+                "info",
+                "Odd training days: "
+                + "; ".join(odd_off[-2:])
+                + ". Count them as real work; lighten or protect the next hard day.",
+            )
+        )
+    if changed:
+        insights.append(
+            _insight(
+                "adherence",
+                "info",
+                "Workout changed: "
+                + "; ".join(changed[-2:])
+                + ". Use the latest logged session as the new target going forward.",
             )
         )
 
@@ -487,16 +581,54 @@ def _build_insights(
             )
         )
 
-    # --- Protein journal ---
+    # --- Nutrition: protein journal, carbs, hydration extras ---
     protein_days = sum(1 for row in merged if row.get("journal", {}).get("Consumed protein?"))
-    if gym_days and protein_days < len(gym_days) // 2:
+    if protein_days < max(3, len(merged) // 2):
         insights.append(
             _insight(
                 "nutrition",
                 "warn",
-                f"Protein journal logged on only {protein_days}/{len(merged)} days. Target ~{protein_target} g/day on training days.",
+                f"Protein journal logged on only {protein_days}/{len(merged)} days. "
+                f"Target ~{protein_target} g/day every day — mark Whoop “Consumed protein?”.",
             )
         )
+    else:
+        insights.append(
+            _insight(
+                "nutrition",
+                "info",
+                f"Daily protein target is ~{protein_target} g across {nutrition['meals_per_day']} meals.",
+            )
+        )
+
+    if planned_today == "OFF":
+        insights.append(
+            _insight(
+                "nutrition",
+                "info",
+                f"OFF day carbs: {nutrition['carb_off']}. Keep protein steady.",
+            )
+        )
+        insights.append(
+            _insight("nutrition", "info", f"Alcohol: {nutrition['alcohol']}")
+        )
+    else:
+        insights.append(
+            _insight(
+                "nutrition",
+                "info",
+                f"Gym-day carbs: {nutrition['carb_gym']}. Pre-workout: {nutrition['pre_workout']}.",
+            )
+        )
+
+    insights.append(
+        _insight(
+            "nutrition",
+            "info",
+            f"Hit ~{nutrition['hydration_liters']:g} L water, {nutrition['creatine_g']:g} g creatine, "
+            f"and ~{nutrition['fiber_g']} g fiber today.",
+        )
+    )
 
     # --- Whoop data freshness ---
     if not recoveries:
@@ -508,7 +640,7 @@ def _build_insights(
             _insight("recovery", "info", "Today's Whoop recovery is missing — upload latest Whoop export.")
         )
 
-    # Sort: warn first, then info, then good; cap at 10
+    # Sort: warn first, then info, then good; cap at 10 (keep ≥2 nutrition tips)
     order = {"warn": 0, "info": 1, "good": 2}
     insights.sort(key=lambda i: order.get(i["level"], 1))
     seen_text: set[str] = set()
@@ -517,7 +649,14 @@ def _build_insights(
         if item["text"] not in seen_text:
             seen_text.add(item["text"])
             unique.append(item)
-    return unique[:10]
+
+    cap = 10
+    nutrition_items = [i for i in unique if i.get("category") == "nutrition"]
+    reserved = nutrition_items[:2]
+    others = [i for i in unique if i.get("category") != "nutrition"]
+    merged_out = others[: cap - len(reserved)] + reserved
+    merged_out.sort(key=lambda i: order.get(i["level"], 1))
+    return merged_out[:cap]
 
 
 def _training_recommendation(recovery: float | None, thresholds: dict[str, int], planned: str) -> str:

@@ -17,7 +17,7 @@
       if (meta) meta.setAttribute("content", theme === "light" ? "#f0f4f9" : "#080b10");
     })();
   </script>
-  <link rel="stylesheet" href="/static/dashboard.css?v=9">
+  <link rel="stylesheet" href="/static/dashboard.css?v=10">
 </head>
 <body>
   <div class="app">
@@ -240,7 +240,11 @@
       $("#briefing-mods").innerHTML = mods.map((m) => `<li>${m}</li>`).join("");
 
       $("#briefing-yesterday").textContent = b.yesterday ? b.yesterday.message : "";
-      $("#briefing-protein").textContent = b.protein ? b.protein.message : "";
+      const nutritionBits = [];
+      if (b.nutrition && b.nutrition.journal_prompt) nutritionBits.push(b.nutrition.journal_prompt);
+      if (b.nutrition && Array.isArray(b.nutrition.tips)) nutritionBits.push(...b.nutrition.tips);
+      else if (b.protein && b.protein.message) nutritionBits.push(b.protein.message);
+      $("#briefing-protein").textContent = nutritionBits.join(" · ");
 
       const staleEl = $("#briefing-stale");
       if (b.whoop_stale_days != null && b.whoop_stale_days > 0) {
@@ -251,6 +255,61 @@
       }
 
       renderSessionComparison(b.last_session_comparison, b.session_note, b.mode, b.next_session);
+      renderPlanAhead(b.plan_ahead);
+      renderBellyFat(b.belly_fat);
+    }
+
+    function renderPlanAhead(plan) {
+      let el = $("#plan-ahead");
+      if (!el) {
+        const hero = $("#hero-section");
+        if (!hero) return;
+        el = document.createElement("div");
+        el.id = "plan-ahead";
+        el.className = "plan-ahead";
+        hero.appendChild(el);
+      }
+      if (!plan || !plan.days || !plan.days.length) {
+        el.innerHTML = "";
+        return;
+      }
+      const flag = plan.needs_adaptation ? "Adapted plan ahead" : "Plan ahead";
+      const days = plan.days.slice(0, 7).map((d) => {
+        const cal = d.calendar_session || "—";
+        const sug = d.suggested_session || cal;
+        const drift = sug !== cal ? ` <em>(cal: ${cal})</em>` : "";
+        return `<li><strong>${d.weekday.slice(0,3)} ${d.date.slice(5)}</strong> — ${sug}${drift}<span class="plan-ahead-reason">${d.reason || ""}</span></li>`;
+      }).join("");
+      el.innerHTML = `
+        <div class="plan-ahead-title">${flag}</div>
+        <p class="plan-ahead-msg">${plan.message || ""}</p>
+        <ul class="plan-ahead-list">${days}</ul>
+      `;
+    }
+
+    function renderBellyFat(bf) {
+      let el = $("#belly-fat-block");
+      if (!el) {
+        const hero = $("#hero-section");
+        if (!hero) return;
+        el = document.createElement("div");
+        el.id = "belly-fat-block";
+        el.className = "belly-fat-block";
+        hero.appendChild(el);
+      }
+      if (!bf || !bf.enabled) { el.innerHTML = ""; return; }
+
+      const alerts = (bf.alerts || []).map(a => `<div class="belly-alert">⚠ ${a}</div>`).join("");
+      const tips = (bf.tips || []).map(t => `<li>${t}</li>`).join("");
+      const waist = bf.waist_note ? `<div class="belly-stat">${bf.waist_note}</div>` : "";
+      const weight = bf.weight_note ? `<div class="belly-stat belly-weight">${bf.weight_note}</div>` : "";
+      const cal = bf.calorie_note ? `<div class="belly-cal">${bf.calorie_note}</div>` : "";
+      el.innerHTML = `
+        <div class="belly-fat-title">Cut Goal — 4–6 kg Fat Loss</div>
+        ${weight}${waist}${cal}
+        ${alerts}
+        <ul class="belly-tips">${tips}</ul>
+      `;
     }
 
     function renderSessionComparison(comp, sessionNote, mode, nextSession) {
@@ -282,6 +341,36 @@
       html += `<div class="comparison-title">${title}</div>`;
       if (comp.duration_min) {
         html += `<p class="empty" style="margin-bottom:0.65rem;">${comp.duration_min} min · ${Math.round(comp.total_volume || 0)} vol</p>`;
+      }
+      const variations = comp.variations || null;
+      if (variations && variations.message) {
+        html += `<p class="session-note"><strong>Exercise variations</strong> · ${variations.message}</p>`;
+      }
+      if (variations && (variations.muscle_balance_notes?.length || Object.keys(variations.muscle_parts_focus_next || {}).length)) {
+        const covered = variations.muscle_parts_covered || {};
+        const focus = variations.muscle_parts_focus_next || {};
+        const groups = ["chest", "back", "shoulders", "biceps", "triceps", "legs"];
+        const rows = groups
+          .filter((g) => covered[g] || focus[g])
+          .map((g) => {
+            const coveredTxt = (covered[g] || []).join(", ") || "—";
+            const focusTxt = (focus[g] || []).join(", ") || "balanced";
+            const state = focus[g]?.length ? "focus" : "balanced";
+            return `
+              <div class="muscle-row state-${state}">
+                <div class="muscle-name">${g}</div>
+                <div class="muscle-covered"><span>covered</span> ${coveredTxt}</div>
+                <div class="muscle-next"><span>next</span> ${focusTxt}</div>
+              </div>
+            `;
+          })
+          .join("");
+        html += `
+          <div class="muscle-balance">
+            <div class="comparison-title">Muscle Coverage</div>
+            <div class="muscle-grid">${rows}</div>
+          </div>
+        `;
       }
 
       if (comp.exercises?.length) {

@@ -3,10 +3,15 @@
   "user": {
     "name": "Roshan",
     "weight_kg": 69,
+    "weight_target_kg": 64,
+    "weight_target_range_kg": [63, 65],
     "height_cm": 163,
     "waist_cm": 85,
-    "protein_target_g": 140,
-    "goal": "Muscle gain and body recomposition"
+    "waist_target_cm": 80,
+    "protein_target_g": 110,
+    "goal": "Fat loss (4–6 kg cut) with muscle preservation, belly fat reduction, body recomposition",
+    "steps_target": 8000,
+    "sleep_target_hours": 7.5
   },
   "schedule": {
     "monday": "Legs A",
@@ -41,11 +46,71 @@
       "summary": "No Whoop data — train at RIR 3 and stop if performance drops."
     }
   },
+  "adaptation_rules": {
+    "enabled": true,
+    "lookback_days": 14,
+    "plan_ahead_days": 7,
+    "summary": "If workouts change, days are missed, or odd/extra sessions appear, adapt and suggest the plan ahead — do not blindly force the calendar.",
+    "principles": [
+      "Prefer the weekly calendar when training is on track.",
+      "On missed days: catch up at most one session, and only if recovery is green — never stack missed days back-to-back.",
+      "On odd days (trained on OFF, wrong session type, or unlabeled/New Workout): treat as real work done; shift or lighten the next hard day as needed.",
+      "If exercise selection changes in a logged workout, use the latest version as the target and note the change in the plan ahead.",
+      "When you swap or add exercises within a session (e.g. T-bar instead of incline row, preacher instead of only incline curls), treat the newest full log as the working template for next time — suggest those lifts and loads, and call out what changed vs the prior version.",
+      "Track muscle-part coverage for all major groups inside each session (chest, shoulders, triceps, biceps, back, legs). If one part was under-covered last time, suggest emphasis for that part in the next matching session.",
+      "Keep planned movement patterns (squat/hinge/push/pull/arms) but allow exercise variation inside them; do not force old exercises if you replaced them.",
+      "After an odd or hard unexpected session, protect the next planned rest day or insert an easier day before the next compounds.",
+      "Always show the next several days of suggested sessions so the week stays clear."
+    ]
+  },
   "session_notes": {
-    "Legs A": "Leg press, goblet squat, RDL, leg extension, calves, core",
-    "Push A": "Bench, machine fly, incline DB, shoulder press, lateral raise, triceps",
-    "Pull A": "Pull-ups, lat pulldown, face pull, incline row, biceps",
-    "Legs B": "Squat pattern, RDL, leg curl, leg press, calves",
-    "Upper B": "Incline press, rows, shoulders, arms — lighter upper day"
+    "Legs A": "BW squat warm-up, barbell squat, leg press, leg extension; keep goblet/RDL/lunges/calves/core when energy allows (latest Jul 27 was squat-focused)",
+    "Push A": "Bench, DB bench or incline, machine/cable fly, shoulder press, lateral raise, tricep pushdown, DB tricep extension (rear-delt when time allows)",
+    "Pull A": "Pull-ups, lat pulldown, T-bar row (or incline row), face pull, incline curl, preacher curl, hammer curl",
+    "Legs B": "BW/barbell squat, walking lunges when possible, leg press, seated leg curl, calves (add RDL if missing)",
+    "Upper B": "Incline press, rows, light shoulder press, lateral raise, rear-delt fly, EZ/preacher curl, tricep kickback — lighter upper day"
+  },
+  "nutrition": {
+    "protein_target_g": 110,
+    "calorie_target": 1750,
+    "calorie_target_gym_days": 1850,
+    "calorie_target_rest_days": 1650,
+    "calorie_floor_kcal": 1500,
+    "calorie_awareness": "300-400 kcal deficit daily. Gym days ~1850, rest days ~1650. Never go below 1500 kcal — muscle loss accelerates below that.",
+    "weight_loss_timeline_weeks": "12-16",
+    "meals_per_day": 4,
+    "diet_notes": "Eggs, dairy, chicken, goat, vegetables, fruits, nuts, dates, and other staples OK.",
+    "carb_strategy": {
+      "gym_days": "Higher carbs — prioritize around training; keep dinner lighter",
+      "off_days": "Lighter carbs all day — mostly protein + vegetables",
+      "pre_workout": "Banana + protein powder before gym",
+      "night_carbs": "Minimize rice/roti at dinner; prefer protein + veg at night to reduce belly fat"
+    },
+    "hydration_liters": 3.0,
+    "creatine_g": 5,
+    "fiber_g": 30,
+    "alcohol": "Minimize; avoid the night before training when possible"
+  },
+  "belly_fat_rules": {
+    "enabled": true,
+    "summary": "Target: lose 4–6 kg (69 → 63–65 kg) in 12–16 weeks. South Asian visceral fat predisposition — also track waist target 80 cm. Key levers: calorie deficit, sleep, daily steps, resistance training.",
+    "rules": [
+      "Eat ~1850 kcal on gym days, ~1650 kcal on rest days — 300-400 kcal deficit drives fat loss.",
+      "Never go below 1500 kcal — muscle loss accelerates and metabolism adapts negatively.",
+      "Keep protein at 110 g every day — this is non-negotiable to preserve muscle during cut.",
+      "Sleep 7–7.5 h every night — poor sleep raises cortisol which stalls fat loss and drives belly fat storage.",
+      "Hit 8000+ steps daily, including rest days — walking burns ~300-400 kcal and is effective for visceral fat.",
+      "Keep dinner mostly protein + vegetables; avoid heavy carbs (rice/roti) after 7 PM.",
+      "Maintain resistance training 5x/week — lifting preserves muscle mass during calorie deficit.",
+      "Manage stress — cortisol spikes store fat preferentially around the belly.",
+      "Weigh yourself weekly (same time, morning, fasted) — expect 0.3–0.5 kg/week drop.",
+      "Measure waist monthly — target is 80 cm (currently 85 cm)."
+    ],
+    "coaching_reminders": {
+      "low_sleep": "Sleep under 7 h — cortisol will be elevated; belly fat reduction stalls on poor sleep.",
+      "rest_day": "REST DAY: target ~1650 kcal, 110 g protein; hit 8000+ steps; keep dinner light (protein + veg, skip heavy carbs).",
+      "gym_day": "GYM DAY: target ~1850 kcal, 110 g protein; lift hard, walk to/from if possible, lighter carbs at dinner.",
+      "stress_flag": "High stress day logged — prioritize sleep tonight; stress cortisol stores belly fat."
+    }
   }
 }

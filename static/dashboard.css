@@ -458,16 +458,12 @@ body::before {
 }
 
 .ring-center {
-  transform: rotate(90deg);
-  transform-origin: center;
   font-size: 1.65rem;
   font-weight: 800;
   fill: var(--text);
 }
 
 .ring-center-sub {
-  transform: rotate(90deg);
-  transform-origin: center;
   font-size: 0.65rem;
   font-weight: 600;
   fill: var(--text-muted);
@@ -752,6 +748,106 @@ body::before {
   padding: 0.65rem 0.85rem;
   margin-bottom: 0.75rem;
   border-left: 3px solid var(--accent);
+}
+
+.plan-ahead {
+  margin-top: 1.1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.plan-ahead-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  margin-bottom: 0.45rem;
+}
+
+.plan-ahead-msg {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin: 0 0 0.65rem;
+  line-height: 1.4;
+}
+
+.plan-ahead-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.plan-ahead-list li {
+  font-size: 0.84rem;
+  color: var(--text);
+  background: var(--glass);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.7rem;
+}
+
+.plan-ahead-list em {
+  color: var(--text-muted);
+  font-style: normal;
+  font-size: 0.78rem;
+}
+
+.plan-ahead-reason {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+.muscle-balance {
+  margin: 0.55rem 0 0.9rem;
+}
+
+.muscle-grid {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.muscle-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 1fr;
+  gap: 0.55rem;
+  align-items: center;
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.6rem;
+  font-size: 0.78rem;
+}
+
+.muscle-row.state-focus {
+  border-left: 3px solid var(--yellow);
+}
+
+.muscle-row.state-balanced {
+  border-left: 3px solid var(--green);
+}
+
+.muscle-name {
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.muscle-covered,
+.muscle-next {
+  color: var(--text-secondary);
+}
+
+.muscle-covered span,
+.muscle-next span {
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.68rem;
+  margin-right: 0.35rem;
 }
 
 .exercise-cards {
@@ -1099,4 +1195,76 @@ tr.clickable {
 .modal-close:hover {
   background: var(--surface-hover);
   color: var(--text);
+}
+
+/* -- Belly Fat Goal Block -------------------------------- */
+.belly-fat-block {
+  margin-top: 1rem;
+  padding: 1rem 1.1rem;
+  background: rgba(255,100,80,0.08);
+  border: 1px solid rgba(255,100,80,0.25);
+  border-radius: var(--radius-lg);
+}
+
+.belly-fat-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f87060;
+  margin-bottom: 0.55rem;
+}
+
+.belly-alert {
+  background: rgba(255,80,60,0.15);
+  border-left: 3px solid #f87060;
+  border-radius: 6px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.82rem;
+  color: var(--text);
+  margin-bottom: 0.4rem;
+}
+
+.belly-waist {
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.4rem;
+}
+
+.belly-tips {
+  margin: 0;
+  padding-left: 1.2rem;
+  list-style: disc;
+}
+
+.belly-tips li {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+  line-height: 1.45;
+}
+
+.belly-stat {
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.3rem;
+}
+
+.belly-weight {
+  font-size: 0.88rem;
+  color: #f87060;
+  font-weight: 700;
+}
+
+.belly-cal {
+  display: inline-block;
+  background: rgba(255,100,80,0.12);
+  border-radius: 6px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #f87060;
+  margin-bottom: 0.5rem;
 }
