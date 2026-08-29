@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — FitCoach</title>
+  <meta name="robots" content="index, follow" />
+  <meta name="description" content="Privacy policy for FitCoach, a local-first Jefit + WHOOP gym coaching dashboard." />
+  <link rel="canonical" href="https://roshancodes24.github.io/fitcoach/privacy.html" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.65;
+      color: #1a1a2e;
+      background: #f7f8fa;
+      padding: 40px 20px 64px;
+    }
+
+    .page {
+      max-width: 720px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid #e4e7ec;
+      border-radius: 12px;
+      padding: 48px 52px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    }
+
+    header {
+      margin-bottom: 36px;
+      padding-bottom: 28px;
+      border-bottom: 1px solid #e4e7ec;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: #0f1923;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: #00e5a0;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .brand-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: #0f1923;
+      letter-spacing: -0.3px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #0f1923;
+      letter-spacing: -0.5px;
+      line-height: 1.25;
+      margin-bottom: 10px;
+    }
+
+    .meta {
+      font-size: 14px;
+      color: #6b7280;
+    }
+
+    h2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #0f1923;
+      margin: 0 0 16px;
+      padding-top: 28px;
+      letter-spacing: -0.2px;
+      line-height: 1.35;
+    }
+
+    main section:first-of-type h2 {
+      padding-top: 0;
+    }
+
+    main section {
+      margin-bottom: 8px;
+    }
+
+    main section + section {
+      margin-top: 8px;
+      padding-top: 28px;
+      border-top: 1px solid #eef0f4;
+    }
+
+    p {
+      margin: 0 0 16px;
+      color: #374151;
+    }
+
+    p:last-child {
+      margin-bottom: 0;
+    }
+
+    ul {
+      margin: 0 0 16px 20px;
+      color: #374151;
+    }
+
+    li { margin-bottom: 8px; }
+    li:last-child { margin-bottom: 0; }
+
+    a {
+      color: #007a55;
+      text-decoration: none;
+    }
+
+    a:hover { text-decoration: underline; }
+
+    footer {
+      margin-top: 48px;
+      padding-top: 28px;
+      border-top: 1px solid #e4e7ec;
+      font-size: 13px;
+      color: #9ca3af;
+      text-align: center;
+    }
+
+    @media (max-width: 640px) {
+      body { padding: 24px 16px 48px; }
+      .page { padding: 32px 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <p style="margin-bottom: 16px; font-size: 13px;">
+        <a href="./">← FitCoach home</a>
+      </p>
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">FC</div>
+        <span class="brand-name">FitCoach</span>
+      </div>
+      <h1>Privacy Policy</h1>
+      <p class="meta">Last updated: August 29, 2026</p>
+    </header>
+
+    <main>
+      <section aria-labelledby="introduction">
+        <h2 id="introduction">Introduction</h2>
+        <p>
+          FitCoach (also called Gym Sync) is a local-first desktop dashboard that combines
+          Jefit workout exports with WHOOP recovery, sleep, and strain data to generate
+          personal training insights on your own computer.
+        </p>
+        <p>
+          Your privacy matters. This policy explains what FitCoach does and does not do with
+          your information when you use the app, including the optional WHOOP API connection.
+        </p>
+      </section>
+
+      <section aria-labelledby="local-first">
+        <h2 id="local-first">Local-first design</h2>
+        <p>
+          FitCoach runs on your machine. Workout history, WHOOP metrics, coaching insights,
+          and configuration are stored locally (for example in a SQLite database and local
+          config files). We do not operate a FitCoach cloud account that stores your training data.
+        </p>
+        <ul>
+          <li>Jefit CSV/zip imports and WHOOP zip exports stay on your device unless you choose to share files yourself.</li>
+          <li>Dashboard and CLI tools read and write local project files only.</li>
+          <li>FitCoach does not sell, rent, or use your training data for advertising.</li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="whoop">
+        <h2 id="whoop">WHOOP integration</h2>
+        <p>
+          If you connect WHOOP through the official WHOOP Developer API (OAuth), FitCoach
+          requests read-only access to recovery, cycles, sleep, and workout data, plus the
+          <code>offline</code> scope so tokens can be refreshed without signing in every time.
+        </p>
+        <ul>
+          <li>
+            OAuth client credentials and tokens are stored only on your device
+            (for example under a local <code>data/</code> folder or environment variables).
+          </li>
+          <li>
+            FitCoach uses those tokens solely to fetch your WHOOP data into the local database
+            for coaching insights.
+          </li>
+          <li>
+            FitCoach does not post workouts, change your WHOOP account, or share your WHOOP
+            data with third parties.
+          </li>
+          <li>
+            WHOOP’s own handling of your account and API data is governed by
+            <a href="https://www.whoop.com/privacy/" rel="noopener noreferrer">WHOOP’s privacy policy</a>.
+          </li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="jefit">
+        <h2 id="jefit">Jefit data</h2>
+        <p>
+          Jefit does not provide an official OAuth API for this app. FitCoach imports data you
+          export (CSV) or, if you explicitly enable a public scrape, reads publicly visible
+          profile/log pages according to your Jefit privacy settings. FitCoach does not upload
+          your Jefit exports to our servers.
+        </p>
+      </section>
+
+      <section aria-labelledby="oauth-redirect">
+        <h2 id="oauth-redirect">OAuth redirect page</h2>
+        <p>
+          The GitHub Pages page
+          <a href="whoop-callback.html"><code>whoop-callback.html</code></a>
+          exists so WHOOP can redirect your browser after you authorize FitCoach. That page
+          only reads the temporary authorization <code>code</code> and <code>state</code> from
+          the URL so it can hand them to your local FitCoach dashboard (or show them for a
+          one-time CLI paste). It does not store those values on a FitCoach server.
+        </p>
+      </section>
+
+      <section aria-labelledby="third-parties">
+        <h2 id="third-parties">Third parties</h2>
+        <p>
+          FitCoach does not embed advertising or analytics SDKs. When you use the WHOOP API
+          connection, your browser and app communicate with WHOOP’s services. Hosting of this
+          privacy policy and the OAuth helper page is on GitHub Pages (GitHub’s service).
+        </p>
+      </section>
+
+      <section aria-labelledby="contact">
+        <h2 id="contact">Contact</h2>
+        <p>
+          If you have questions about this privacy policy or how FitCoach handles your
+          information, please contact:
+        </p>
+        <p>
+          <a href="mailto:developerchromextension@gmail.com">developerchromextension@gmail.com</a>
+        </p>
+      </section>
+
+      <section aria-labelledby="changes">
+        <h2 id="changes">Changes to this policy</h2>
+        <p>
+          We may update this privacy policy from time to time. When we do, we will revise the
+          “Last updated” date at the top of this page. Continued use of FitCoach after any
+          changes constitutes acceptance of the updated policy.
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      <p>FitCoach — local-first gym coaching · <a href="https://github.com/roshancodes24/fitcoach">GitHub</a></p>
+    </footer>
+  </div>
+</body>
+</html>

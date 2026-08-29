@@ -4,7 +4,10 @@
     "name": "Roshan",
     "weight_kg": 69,
     "weight_target_kg": 64,
-    "weight_target_range_kg": [63, 65],
+    "weight_target_range_kg": [
+      63,
+      65
+    ],
     "height_cm": 163,
     "waist_cm": 85,
     "waist_target_cm": 80,
@@ -111,6 +114,15 @@
       "rest_day": "REST DAY: target ~1650 kcal, 110 g protein; hit 8000+ steps; keep dinner light (protein + veg, skip heavy carbs).",
       "gym_day": "GYM DAY: target ~1850 kcal, 110 g protein; lift hard, walk to/from if possible, lighter carbs at dinner.",
       "stress_flag": "High stress day logged — prioritize sleep tonight; stress cortisol stores belly fat."
+    }
+  },
+  "integrations": {
+    "whoop": {
+      "enabled": true,
+      "prefer": "api",
+      "lookback_days": 14,
+      "redirect_uri": "https://roshancodes24.github.io/fitcoach/whoop-callback.html",
+      "notes": "Secrets in data/whoop_secrets.json (or WHOOP_CLIENT_ID / WHOOP_CLIENT_SECRET); tokens in data/whoop_tokens.json. Journal answers still require zip export. OAuth redirect is GitHub Pages (whoop-callback.html), which hands off to local dashboard http://127.0.0.1:5000/api/whoop/callback."
     }
   }
 }
