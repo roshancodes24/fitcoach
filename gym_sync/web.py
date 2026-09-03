@@ -10,6 +10,7 @@ from werkzeug.utils import secure_filename
 from gym_sync.dashboard_data import build_dashboard_payload, fetch_workout_detail
 from gym_sync.db import connect
 from gym_sync.jefit_parser import load_jefit_into_db
+from gym_sync.muscle_recovery import build_muscle_recovery
 from gym_sync.whoop_parser import load_whoop_into_db
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -65,12 +66,24 @@ def create_app(db_path: Path | None = None, config_path: Path | None = None) -> 
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         return response
 
+    @app.get("/mannequin")
+    def mannequin():
+        from flask import make_response
+        response = make_response(render_template("mannequin.html"))
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        return response
+
     @app.get("/api/dashboard")
     def api_dashboard():
         days = request.args.get("days", 14, type=int)
         conn = get_conn()
         payload = build_dashboard_payload(conn, Path(app.config["CONFIG_PATH"]), days=days)
         return jsonify(payload)
+
+    @app.get("/api/muscle-recovery")
+    def api_muscle_recovery():
+        conn = get_conn()
+        return jsonify(build_muscle_recovery(conn, Path(app.config["CONFIG_PATH"])))
 
     @app.get("/api/workout/<day>")
     def api_workout(day: str):
