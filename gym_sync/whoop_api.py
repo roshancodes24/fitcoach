@@ -22,6 +22,13 @@ AUTH_URL = "https://api.prod.whoop.com/oauth/oauth2/auth"
 TOKEN_URL = "https://api.prod.whoop.com/oauth/oauth2/token"
 API_BASE = "https://api.prod.whoop.com/developer"
 
+# Cloudflare on api.prod.whoop.com bans Python-urllib's default User-Agent (Error 1010).
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36 FitCoach/1.0"
+)
+
 DEFAULT_SCOPES = (
     "read:recovery read:cycles read:sleep read:workout offline"
 )
@@ -177,6 +184,7 @@ def _form_post(url: str, fields: dict[str, str]) -> dict[str, Any]:
         headers={
             "Content-Type": "application/x-www-form-urlencoded",
             "Accept": "application/json",
+            "User-Agent": USER_AGENT,
         },
         method="POST",
     )
@@ -275,6 +283,7 @@ def _api_get(path: str, params: dict[str, Any], access_token: str) -> dict[str, 
         headers={
             "Authorization": f"Bearer {access_token}",
             "Accept": "application/json",
+            "User-Agent": USER_AGENT,
         },
         method="GET",
     )

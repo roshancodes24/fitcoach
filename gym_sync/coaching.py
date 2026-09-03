@@ -315,6 +315,128 @@ def _exercise_key(name: str) -> str:
     return " ".join(name.lower().replace("-", " ").split())
 
 
+def _matches_required_exercise(exercise_name: str, required: str) -> bool:
+    """True if logged exercise satisfies a required lift (all required tokens present)."""
+    ek = _exercise_key(exercise_name)
+    rk = _exercise_key(required)
+    if ek == rk:
+        return True
+    tokens = [t for t in rk.split() if t]
+    return bool(tokens) and all(t in ek for t in tokens)
+
+
+def _required_exercises_for(config: dict[str, Any], planned: str) -> list[str]:
+    req = config.get("required_exercises") or {}
+    items = req.get(planned) or []
+    return [str(x) for x in items if x]
+
+
+def _find_latest_exercise_by_name(
+    conn: sqlite3.Connection,
+    required_name: str,
+    before_date: str | None = None,
+) -> dict[str, Any] | None:
+    """Most recent log of a required exercise (any session), for restoring targets."""
+    params: list[Any] = []
+    date_clause = ""
+    if before_date:
+        date_clause = "AND s.date < ?"
+        params.append(before_date)
+    rows = conn.execute(
+        f"""
+        SELECT e.exercise_name, e.sets_count, e.top_weight, e.top_reps, e.volume, e.logs,
+               s.date AS session_date, s.day_name
+        FROM jefit_exercises e
+        JOIN jefit_sessions s ON e.session_id = s.session_id
+        WHERE 1=1 {date_clause}
+        ORDER BY s.date DESC, e.id DESC
+        LIMIT 200
+        """,
+        params,
+    ).fetchall()
+    for row in rows:
+        if _matches_required_exercise(row["exercise_name"], required_name):
+            return dict(row)
+    return None
+
+
+def _insert_required_into_template(
+    exercises: list[dict[str, Any]],
+    restored: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Insert restored required lift after warm-up squats / push-ups when possible."""
+    out = list(exercises)
+    name = _exercise_key(restored.get("exercise_name", ""))
+    insert_at = 0
+    for i, ex in enumerate(out):
+        n = _exercise_key(ex.get("exercise_name", ""))
+        if any(k in n for k in ("walking", "push up", "push-up", "bodyweight squat", "bw squat")):
+            insert_at = i + 1
+            continue
+        break
+    # Prefer after bodyweight squat warm-up specifically
+    for i, ex in enumerate(out):
+        n = _exercise_key(ex.get("exercise_name", ""))
+        if "bodyweight squat" in n or n == "bw squat":
+            insert_at = i + 1
+            break
+    out.insert(insert_at, restored)
+    return out
+
+
+def _ensure_required_in_suggestions(
+    conn: sqlite3.Connection,
+    config: dict[str, Any],
+    planned: str,
+    suggested: list[dict[str, Any]],
+    recovery_zone: str,
+    before_date: str | None = None,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Restore required lifts missing from the latest-log template."""
+    required = _required_exercises_for(config, planned)
+    if not required:
+        return suggested, []
+
+    restored_notes: list[str] = []
+    result = list(suggested)
+    for req_name in required:
+        if any(_matches_required_exercise(s.get("exercise_name", ""), req_name) for s in result):
+            continue
+        hist = _find_latest_exercise_by_name(conn, req_name, before_date=before_date)
+        if hist:
+            entry = {
+                "exercise_name": hist["exercise_name"],
+                "last_top_set": _format_top_set(hist.get("top_weight"), hist.get("top_reps")),
+                "last_logs": hist.get("logs") or "",
+                "target_next": _progression_target(
+                    hist.get("top_weight"), hist.get("top_reps"), recovery_zone
+                ),
+                "pattern": _classify_pattern(hist["exercise_name"]),
+                "required": True,
+                "restored": True,
+                "restored_from": hist.get("session_date"),
+            }
+            note = (
+                f"REQUIRED restored: {hist['exercise_name']} "
+                f"(from {hist.get('session_date')} — was missing in latest log)."
+            )
+        else:
+            entry = {
+                "exercise_name": req_name,
+                "last_top_set": "—",
+                "last_logs": "",
+                "target_next": "Log every set — required compound",
+                "pattern": _classify_pattern(req_name),
+                "required": True,
+                "restored": True,
+                "restored_from": None,
+            }
+            note = f"REQUIRED: add {req_name} (no history found — start light and log it)."
+        result = _insert_required_into_template(result, entry)
+        restored_notes.append(note)
+    return result, restored_notes
+
+
 def _classify_pattern(name: str) -> str:
     n = _exercise_key(name)
     if any(k in n for k in ("pull up", "pulldown", "lat ")):
@@ -459,10 +581,14 @@ def analyze_workout_variations(
     planned: str,
     recovery_zone: str,
     before_date: str | None = None,
+    config: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """Compare latest vs prior log of the same session; suggest next template from latest."""
     if planned == "OFF":
         return None
+
+    if config is None:
+        config = {}
 
     latest = _find_last_matching_session(conn, planned, before_date=before_date)
     if not latest:
@@ -474,6 +600,7 @@ def analyze_workout_variations(
             "removed": [],
             "kept": [],
             "suggested_exercises": [],
+            "required_restored": [],
         }
 
     latest_ex = _session_exercises(conn, latest["date"], latest.get("session_id"))
@@ -525,8 +652,14 @@ def analyze_workout_variations(
             }
         )
 
-    changed = bool(added or removed or swaps)
+    suggested, required_restored = _ensure_required_in_suggestions(
+        conn, config, planned, suggested, recovery_zone, before_date=before_date
+    )
+
+    changed = bool(added or removed or swaps or required_restored)
     parts: list[str] = []
+    if required_restored:
+        parts.extend(required_restored[:3])
     if swaps:
         parts.append("Swaps: " + "; ".join(swaps[:4]))
     if added:
@@ -551,6 +684,7 @@ def analyze_workout_variations(
         "removed": removed,
         "kept": kept,
         "swaps": swaps,
+        "required_restored": required_restored,
         "muscle_parts_covered": covered_parts,
         "muscle_parts_focus_next": next_focus,
         "muscle_balance_notes": balance_notes,
@@ -631,10 +765,10 @@ def build_last_session_comparison(
     if planned == "OFF":
         return None
 
+    config = load_config(config_path)
     before = today_key
     last = _find_last_matching_session(conn, planned, before_date=before)
     if not last:
-        config = load_config(config_path)
         notes = config.get("session_notes", {}).get(planned)
         return {
             "planned": planned,
@@ -659,6 +793,40 @@ def build_last_session_comparison(
             }
         )
 
+    # Restore required compounds missing from the latest log (e.g. Barbell Squat on Legs A)
+    restored_msgs: list[str] = []
+    for req_name in _required_exercises_for(config, planned):
+        if any(_matches_required_exercise(c["exercise_name"], req_name) for c in comparison):
+            continue
+        hist = _find_latest_exercise_by_name(conn, req_name, before_date=before)
+        if hist:
+            entry = {
+                "exercise_name": hist["exercise_name"],
+                "last_top_set": _format_top_set(hist.get("top_weight"), hist.get("top_reps")),
+                "last_logs": hist.get("logs") or "",
+                "target_today": _progression_target(
+                    hist.get("top_weight"), hist.get("top_reps"), recovery_zone
+                ),
+                "required": True,
+                "restored": True,
+                "restored_from": hist.get("session_date"),
+            }
+            restored_msgs.append(
+                f"REQUIRED restored: {hist['exercise_name']} (from {hist.get('session_date')})."
+            )
+        else:
+            entry = {
+                "exercise_name": req_name,
+                "last_top_set": "—",
+                "last_logs": "",
+                "target_today": "Required compound — log every set",
+                "required": True,
+                "restored": True,
+                "restored_from": None,
+            }
+            restored_msgs.append(f"REQUIRED: add {req_name}.")
+        comparison = _insert_required_into_template(comparison, entry)
+
     today_exercises: list[dict[str, Any]] = []
     if today_already_done:
         today_row = conn.execute(
@@ -678,6 +846,10 @@ def build_last_session_comparison(
                 }
             )
 
+    message = None
+    if restored_msgs:
+        message = " ".join(restored_msgs)
+
     return {
         "planned": planned,
         "last_date": last["date"],
@@ -687,11 +859,15 @@ def build_last_session_comparison(
         "exercises": comparison,
         "today_exercises": today_exercises,
         "today_already_done": today_already_done,
+        "session_note": config.get("session_notes", {}).get(planned),
+        "message": message,
+        "required_restored": restored_msgs,
         "variations": analyze_workout_variations(
             conn,
             planned,
             recovery_zone,
             before_date=None if today_already_done else today_key,
+            config=config,
         ),
     }
 
@@ -712,6 +888,8 @@ def _belly_fat_reminder(
     sleep_target = float(user.get("sleep_target_hours", 7.5))
     waist_cm = user.get("waist_cm")
     waist_target = user.get("waist_target_cm", 80)
+    belly_navel_cm = user.get("belly_navel_cm")
+    body_fat_pct = user.get("body_fat_pct")
     weight_kg = user.get("weight_kg")
     weight_target = user.get("weight_target_kg")
     weight_range = user.get("weight_target_range_kg")
@@ -749,6 +927,13 @@ def _belly_fat_reminder(
             waist_note = f"Waist: {waist_cm} cm → target {waist_target} cm ({diff} cm to go)."
         else:
             waist_note = f"Waist at {waist_cm} cm — target reached!"
+    if belly_navel_cm:
+        navel_bit = f"Navel: {belly_navel_cm} cm."
+        waist_note = f"{waist_note} {navel_bit}".strip() if waist_note else navel_bit
+
+    body_fat_note = None
+    if body_fat_pct is not None:
+        body_fat_note = f"Body fat: {body_fat_pct}%."
 
     weight_note = None
     if weight_kg and weight_target:
@@ -772,6 +957,7 @@ def _belly_fat_reminder(
         "alerts": alerts,
         "tips": tips,
         "waist_note": waist_note,
+        "body_fat_note": body_fat_note,
         "weight_note": weight_note,
         "calorie_note": calorie_note,
         "steps_target": steps_target,
@@ -888,11 +1074,6 @@ def build_morning_briefing(
     nutrition_block = {
         **_nutrition_settings(config),
         "tips": nutrition_tips,
-        "journal_prompt": (
-            "Log Whoop journal: Consumed protein?"
-            if not protein_yesterday or not protein_yesterday["answered_yes"]
-            else "Protein journal logged yesterday — keep the streak."
-        ),
     }
 
     comparison = None
@@ -939,10 +1120,11 @@ def build_morning_briefing(
     workout_variations = None
     if variation_session and variation_session != "OFF":
         workout_variations = analyze_workout_variations(
-            conn, variation_session, zone, before_date=None
+            conn, variation_session, zone, before_date=None, config=config
         )
 
     belly_fat_block = _belly_fat_reminder(config, planned, whoop, already_done)
+    sleep_target = float(user.get("sleep_target_hours") or 7.5)
 
     return {
         "mode": mode,
@@ -952,6 +1134,9 @@ def build_morning_briefing(
         "recovery": recovery,
         "recovery_zone": zone,
         "sleep_hours": whoop["sleep_hours"] if whoop else None,
+        "sleep_target_hours": sleep_target,
+        "sleep_performance": whoop["sleep_performance"] if whoop else None,
+        "day_strain": whoop["day_strain"] if whoop else None,
         "hrv": whoop["hrv"] if whoop else None,
         "sleep_debt_min": whoop["sleep_debt_min"] if whoop else None,
         "headline": headline,
@@ -963,7 +1148,10 @@ def build_morning_briefing(
         "nutrition": nutrition_block,
         "user": {
             "name": user.get("name"),
+            "sex": user.get("sex") or user.get("gender"),
+            "age": user.get("age"),
             "weight_kg": user.get("weight_kg"),
+            "body_fat_pct": user.get("body_fat_pct"),
             "goal": user.get("goal"),
             "protein_target_g": protein_target,
         },

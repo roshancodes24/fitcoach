@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS whoop_daily (
     sleep_debt_min REAL,
     deep_min REAL,
     rem_min REAL,
+    light_min REAL,
     calories INTEGER,
     updated_at TEXT NOT NULL
 );
@@ -75,7 +76,34 @@ CREATE TABLE IF NOT EXISTS jefit_exercises (
 
 CREATE INDEX IF NOT EXISTS idx_jefit_exercises_date ON jefit_exercises(date);
 CREATE INDEX IF NOT EXISTS idx_whoop_workouts_date ON whoop_workouts(date);
+
+CREATE TABLE IF NOT EXISTS body_measurements (
+    date TEXT PRIMARY KEY,
+    weight_kg REAL,
+    height_cm REAL,
+    body_fat_pct REAL,
+    waist_cm REAL,
+    belly_navel_cm REAL,
+    chest_cm REAL,
+    arms_cm REAL,
+    forearms_cm REAL,
+    shoulders_cm REAL,
+    hips_cm REAL,
+    upper_leg_cm REAL,
+    lower_leg_cm REAL,
+    neck_cm REAL,
+    note TEXT,
+    updated_at TEXT NOT NULL
+);
 """
+
+
+def _ensure_whoop_daily_columns(conn: sqlite3.Connection) -> None:
+    """Add columns introduced after initial schema (SQLite has no IF NOT EXISTS for ADD)."""
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(whoop_daily)")}
+    if "light_min" not in cols:
+        conn.execute("ALTER TABLE whoop_daily ADD COLUMN light_min REAL")
+        conn.commit()
 
 
 def connect(db_path: Path) -> sqlite3.Connection:
@@ -83,6 +111,7 @@ def connect(db_path: Path) -> sqlite3.Connection:
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
+    _ensure_whoop_daily_columns(conn)
     return conn
 
 

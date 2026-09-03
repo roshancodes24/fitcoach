@@ -2,19 +2,31 @@
   "timezone": "Asia/Kolkata",
   "user": {
     "name": "Roshan",
-    "weight_kg": 69,
-    "weight_target_kg": 64,
+    "sex": "male",
+    "weight_kg": 71.0,
+    "weight_target_kg": 68.0,
     "weight_target_range_kg": [
       63,
       65
     ],
-    "height_cm": 163,
-    "waist_cm": 85,
-    "waist_target_cm": 80,
+    "height_cm": 169.0,
+    "body_fat_pct": 22.5,
+    "waist_cm": 84.0,
+    "waist_target_cm": 80.0,
+    "belly_navel_cm": 89.0,
+    "chest_cm": 92.0,
+    "arms_cm": 36.0,
+    "forearms_cm": 29.0,
+    "shoulders_cm": 43.0,
+    "hips_cm": 96.0,
+    "upper_leg_cm": 57.0,
+    "lower_leg_cm": 36.0,
+    "neck_cm": 36.0,
     "protein_target_g": 110,
     "goal": "Fat loss (4–6 kg cut) with muscle preservation, belly fat reduction, body recomposition",
     "steps_target": 8000,
-    "sleep_target_hours": 7.5
+    "sleep_target_hours": 7.5,
+    "age": 32
   },
   "schedule": {
     "monday": "Legs A",
@@ -62,15 +74,25 @@
       "When you swap or add exercises within a session (e.g. T-bar instead of incline row, preacher instead of only incline curls), treat the newest full log as the working template for next time — suggest those lifts and loads, and call out what changed vs the prior version.",
       "Track muscle-part coverage for all major groups inside each session (chest, shoulders, triceps, biceps, back, legs). If one part was under-covered last time, suggest emphasis for that part in the next matching session.",
       "Keep planned movement patterns (squat/hinge/push/pull/arms) but allow exercise variation inside them; do not force old exercises if you replaced them.",
+      "Required exercises (see required_exercises) must stay in the next template even if the latest log omitted them — restore from the most recent historical set of that lift.",
       "After an odd or hard unexpected session, protect the next planned rest day or insert an easier day before the next compounds.",
       "Always show the next several days of suggested sessions so the week stays clear."
     ]
   },
+  "required_exercises": {
+    "Legs A": [
+      "Barbell Squat"
+    ],
+    "Legs B": [
+      "Dumbbell Walking Lunge",
+      "Machine Seated Leg Curl"
+    ]
+  },
   "session_notes": {
-    "Legs A": "BW squat warm-up, barbell squat, leg press, leg extension; keep goblet/RDL/lunges/calves/core when energy allows (latest Jul 27 was squat-focused)",
+    "Legs A": "REQUIRED: Barbell Squat (main compound). BW squat warm-up → Barbell Squat → leg press → leg extension; keep goblet/RDL/lunges/calves/core when energy allows. Do not skip barbell squat for goblet-only.",
     "Push A": "Bench, DB bench or incline, machine/cable fly, shoulder press, lateral raise, tricep pushdown, DB tricep extension (rear-delt when time allows)",
     "Pull A": "Pull-ups, lat pulldown, T-bar row (or incline row), face pull, incline curl, preacher curl, hammer curl",
-    "Legs B": "BW/barbell squat, walking lunges when possible, leg press, seated leg curl, calves (add RDL if missing)",
+    "Legs B": "REQUIRED: Walking lunges + seated leg curl. BW/barbell squat warm-up → walking lunges → goblet or light barbell squat → leg press → seated leg curl → calves (add RDL if missing).",
     "Upper B": "Incline press, rows, light shoulder press, lateral raise, rear-delt fly, EZ/preacher curl, tricep kickback — lighter upper day"
   },
   "nutrition": {
@@ -96,7 +118,7 @@
   },
   "belly_fat_rules": {
     "enabled": true,
-    "summary": "Target: lose 4–6 kg (69 → 63–65 kg) in 12–16 weeks. South Asian visceral fat predisposition — also track waist target 80 cm. Key levers: calorie deficit, sleep, daily steps, resistance training.",
+    "summary": "Target: lose 4–6 kg (71 → 63–65 kg) in 12–16 weeks. South Asian visceral fat predisposition — also track waist target 80 cm (navel currently 89 cm). Key levers: calorie deficit, sleep, daily steps, resistance training.",
     "rules": [
       "Eat ~1850 kcal on gym days, ~1650 kcal on rest days — 300-400 kcal deficit drives fat loss.",
       "Never go below 1500 kcal — muscle loss accelerates and metabolism adapts negatively.",
@@ -107,7 +129,7 @@
       "Maintain resistance training 5x/week — lifting preserves muscle mass during calorie deficit.",
       "Manage stress — cortisol spikes store fat preferentially around the belly.",
       "Weigh yourself weekly (same time, morning, fasted) — expect 0.3–0.5 kg/week drop.",
-      "Measure waist monthly — target is 80 cm (currently 85 cm)."
+      "Measure waist/navel monthly — target is 80 cm (waist 84 cm, navel 89 cm)."
     ],
     "coaching_reminders": {
       "low_sleep": "Sleep under 7 h — cortisol will be elevated; belly fat reduction stalls on poor sleep.",
@@ -117,6 +139,24 @@
     }
   },
   "integrations": {
+    "jefit": {
+      "enabled": true,
+      "user_id": "10560896",
+      "username": "roshan_ambhore",
+      "prefer": "csv",
+      "scrape_lookback_days": 7,
+      "copy_csv_to_imports": true,
+      "downloads_dirs": [
+        "C:/Users/ambho/Downloads",
+        "imports/jefit"
+      ],
+      "csv_glob_patterns": [
+        "*ambhore*.csv",
+        "*jefit*.csv",
+        "roshan*.csv"
+      ],
+      "notes": "CSV auto-import is primary (full day names). Public scrape needs Jefit privacy=Everyone; currently private so scrape will report that and fall back to CSV in auto mode."
+    },
     "whoop": {
       "enabled": true,
       "prefer": "api",

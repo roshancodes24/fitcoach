@@ -17,6 +17,13 @@ def load_config(config_path: Path) -> dict[str, Any]:
     return json.loads(config_path.read_text(encoding="utf-8"))
 
 
+def save_config(config_path: Path, config: dict[str, Any]) -> None:
+    config_path.write_text(
+        json.dumps(config, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
 def _recovery_zone(recovery: float | None, thresholds: dict[str, int]) -> str:
     if recovery is None:
         return "unknown"

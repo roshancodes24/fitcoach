@@ -297,7 +297,6 @@
     .ex-list li:last-child { border-bottom: none; }
     .ex-logs { color: var(--text-muted); font-size: 0.7rem; text-align: right; }
 
-    /* Insights drawer */
     .drawer-toggle {
       position: fixed;
       z-index: 15;
@@ -389,9 +388,9 @@
     .loading-overlay p { font-size: 0.8rem; color: var(--text-muted); }
 
     .zone-green { color: var(--green); }
-    .zone-yellow { color: var(--yellow); }
+    .zone-yellow, .zone-orange { color: var(--accent); }
     .zone-red { color: var(--red); }
-    .zone-unknown { color: var(--text-muted); }
+    .zone-unknown, .zone-muted { color: var(--text-muted); }
 
     @media (max-width: 640px) {
       .hud-left { display: none; }
@@ -430,6 +429,7 @@
       </div>
     </div>
     <a class="hud-btn" href="/">◱ Classic view</a>
+    <a class="hud-btn" href="/mannequin">🧍 Recovery</a>
   </header>
 
   <aside class="hud hud-left" id="hud-metrics"></aside>

@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#080b10" id="meta-theme-color">
+  <title>Profile · FitCoach</title>
+  <script>
+    (function () {
+      var saved = localStorage.getItem("fitcoach-theme");
+      var theme = saved;
+      if (!theme) {
+        theme = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+      }
+      document.documentElement.setAttribute("data-theme", theme);
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute("content", theme === "light" ? "#f0f4f9" : "#080b10");
+    })();
+  </script>
+  <link rel="stylesheet" href="/static/dashboard.css?v=21">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <a class="brand-link" href="/" title="Back to dashboard">
+          <div class="brand-icon">💪</div>
+          <div class="brand-text">
+            <h1>FitCoach</h1>
+            <p>Profile</p>
+          </div>
+        </a>
+      </div>
+      <div class="topbar-actions">
+        <div class="theme-toggle" role="group" aria-label="Theme">
+          <button type="button" class="theme-btn" data-theme="dark" id="theme-dark">Dark</button>
+          <button type="button" class="theme-btn" data-theme="light" id="theme-light">Light</button>
+        </div>
+        <a class="btn-text" href="/">Dashboard</a>
+      </div>
+    </header>
+
+    <div id="loading" class="loading">
+      <div class="loader"></div>
+      Loading profile…
+    </div>
+
+    <div id="content" class="profile-page" style="display:none;">
+      <section class="profile-hero card">
+        <div class="profile-hero-row">
+          <div class="profile-avatar" id="profile-avatar" aria-hidden="true">?</div>
+          <div class="profile-hero-copy">
+            <p class="profile-kicker">Your profile</p>
+            <h2 class="profile-name" id="profile-display-name">Athlete</h2>
+            <p class="profile-meta-preview" id="profile-meta-preview"></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card section profile-card">
+        <div class="body-stats-head">
+          <div>
+            <div class="card-inner-title">Identity</div>
+            <p class="body-stats-sub">Name, sex, age, and training goal</p>
+          </div>
+        </div>
+        <div class="profile-identity">
+          <label class="profile-field">
+            <span class="body-stat-label">Name</span>
+            <input type="text" id="profile-name" name="name" maxlength="80" placeholder="Your name" autocomplete="name">
+          </label>
+          <label class="profile-field">
+            <span class="body-stat-label">Sex</span>
+            <select id="profile-sex" name="sex" autocomplete="sex">
+              <option value="">—</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </label>
+          <label class="profile-field">
+            <span class="body-stat-label">Age</span>
+            <input type="number" id="profile-age" name="age" min="1" max="120" step="1" inputmode="numeric" placeholder="Years" autocomplete="bday-year">
+          </label>
+          <label class="profile-field profile-field-wide">
+            <span class="body-stat-label">Goal</span>
+            <textarea id="profile-goal" name="goal" maxlength="400" rows="3" placeholder="e.g. Fat loss with muscle preservation"></textarea>
+          </label>
+        </div>
+      </section>
+
+      <section class="card section body-stats-card">
+        <div class="body-stats-head">
+          <div>
+            <div class="card-inner-title">Measurements</div>
+            <p class="body-stats-sub">Saved by date so you can compare progress later</p>
+          </div>
+          <div class="body-stats-actions">
+            <label class="measure-date-field">
+              <span class="body-stat-label">Date</span>
+              <input type="date" id="measure-date" name="measured_on">
+            </label>
+            <span class="body-stats-status" id="profile-status"></span>
+            <button type="button" class="btn-save-stats" id="btn-save-profile">Save measurements</button>
+          </div>
+        </div>
+        <div class="body-stats-grid" id="body-stats-grid"></div>
+      </section>
+
+      <section class="card section body-stats-card">
+        <div class="body-stats-head">
+          <div>
+            <div class="card-inner-title">History</div>
+            <p class="body-stats-sub" id="measure-history-sub">Compare entries over time</p>
+          </div>
+        </div>
+        <div id="measure-history" class="measure-history"></div>
+      </section>
+
+      <section class="card section">
+        <div class="body-stats-head">
+          <div>
+            <div class="card-inner-title">Data sources</div>
+            <p class="body-stats-sub">Import Jefit workouts and sync Whoop recovery</p>
+          </div>
+        </div>
+        <div class="upload-bar">
+          <label class="upload-chip upload-jefit">
+            <span class="chip-dot"></span>
+            <span>Jefit</span>
+            <input type="file" id="jefit-file" accept=".csv,text/csv">
+            <small id="jefit-status"></small>
+          </label>
+          <div class="upload-chip-group upload-whoop-group">
+            <label class="upload-chip upload-whoop">
+              <span class="chip-dot"></span>
+              <span>Whoop</span>
+              <input type="file" id="whoop-file" accept=".zip,.csv,application/zip,text/csv">
+              <small id="whoop-status"></small>
+            </label>
+            <div class="whoop-actions">
+              <a class="btn-chip" id="whoop-connect" href="/api/whoop/connect">Connect</a>
+              <button type="button" class="btn-chip" id="whoop-sync">Sync</button>
+              <small id="whoop-api-status"></small>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const $ = (sel) => document.querySelector(sel);
+
+    const THEME_KEY = "fitcoach-theme";
+
+    function getTheme() {
+      return document.documentElement.getAttribute("data-theme") || "dark";
+    }
+
+    function setTheme(theme) {
+      document.documentElement.setAttribute("data-theme", theme);
+      localStorage.setItem(THEME_KEY, theme);
+      const meta = $("#meta-theme-color");
+      if (meta) meta.setAttribute("content", theme === "light" ? "#f0f4f9" : "#080b10");
+      document.querySelectorAll(".theme-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.theme === theme);
+      });
+    }
+
+    function initThemeToggle() {
+      setTheme(getTheme());
+      $("#theme-dark").addEventListener("click", () => setTheme("dark"));
+      $("#theme-light").addEventListener("click", () => setTheme("light"));
+    }
+
+    function showToast(msg, ms) {
+      const t = $("#toast");
+      t.textContent = msg;
+      t.classList.add("show");
+      clearTimeout(showToast._timer);
+      showToast._timer = setTimeout(() => t.classList.remove("show"), ms || 2400);
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    const BODY_STAT_FIELDS = [
+      { key: "weight_kg", label: "Weight", unit: "kg", step: "0.1" },
+      { key: "weight_target_kg", label: "Weight target", unit: "kg", step: "0.1" },
+      { key: "height_cm", label: "Height", unit: "cm", step: "0.1" },
+      { key: "body_fat_pct", label: "Body fat", unit: "%", step: "0.1" },
+      { key: "waist_cm", label: "Waist", unit: "cm", step: "0.1" },
+      { key: "waist_target_cm", label: "Waist target", unit: "cm", step: "0.1" },
+      { key: "belly_navel_cm", label: "Belly (navel)", unit: "cm", step: "0.1" },
+      { key: "chest_cm", label: "Chest", unit: "cm", step: "0.1" },
+      { key: "arms_cm", label: "Arms", unit: "cm", step: "0.1" },
+      { key: "forearms_cm", label: "Forearms", unit: "cm", step: "0.1" },
+      { key: "shoulders_cm", label: "Shoulders", unit: "cm", step: "0.1" },
+      { key: "hips_cm", label: "Hips", unit: "cm", step: "0.1" },
+      { key: "upper_leg_cm", label: "Upper leg", unit: "cm", step: "0.1" },
+      { key: "lower_leg_cm", label: "Lower leg", unit: "cm", step: "0.1" },
+      { key: "neck_cm", label: "Neck", unit: "cm", step: "0.1" },
+    ];
+
+    const HISTORY_FIELDS = [
+      { key: "weight_kg", label: "Weight", unit: "kg" },
+      { key: "body_fat_pct", label: "BF", unit: "%" },
+      { key: "waist_cm", label: "Waist", unit: "cm" },
+      { key: "belly_navel_cm", label: "Navel", unit: "cm" },
+      { key: "chest_cm", label: "Chest", unit: "cm" },
+      { key: "arms_cm", label: "Arms", unit: "cm" },
+      { key: "hips_cm", label: "Hips", unit: "cm" },
+    ];
+
+    function fmtMeasure(value, unit) {
+      if (value == null || value === "") return "—";
+      const n = Number(value);
+      if (Number.isNaN(n)) return "—";
+      const text = Number.isInteger(n) ? String(n) : n.toFixed(1);
+      return unit ? `${text} ${unit}` : text;
+    }
+
+    function fmtDelta(delta, unit) {
+      if (delta == null || delta === "") return "";
+      const n = Number(delta);
+      if (Number.isNaN(n) || n === 0) return n === 0 ? `±0 ${unit}` : "";
+      const sign = n > 0 ? "+" : "";
+      const text = Number.isInteger(n) ? String(n) : n.toFixed(1);
+      return `${sign}${text} ${unit}`;
+    }
+
+    function deltaClass(key, delta) {
+      if (delta == null || delta === 0) return "";
+      // Lower is better for cut metrics.
+      const lowerBetter = new Set(["weight_kg", "body_fat_pct", "waist_cm", "belly_navel_cm", "hips_cm"]);
+      const better = lowerBetter.has(key) ? delta < 0 : delta > 0;
+      return better ? "delta-good" : "delta-bad";
+    }
+
+    function renderHistory(entries) {
+      const el = $("#measure-history");
+      const sub = $("#measure-history-sub");
+      const list = entries || [];
+      if (!list.length) {
+        el.innerHTML = '<p class="empty">No measurement history yet — save today to start.</p>';
+        sub.textContent = "Compare entries over time";
+        return;
+      }
+      sub.textContent = `${list.length} log${list.length === 1 ? "" : "s"} · newest first`;
+      el.innerHTML = list.map((entry) => {
+        const chips = HISTORY_FIELDS.map((field) => {
+          const delta = entry.delta ? entry.delta[field.key] : null;
+          const dText = fmtDelta(delta, field.unit);
+          const dCls = deltaClass(field.key, delta);
+          return `
+            <div class="measure-chip">
+              <span class="body-stat-label">${field.label}</span>
+              <span class="measure-chip-value">${fmtMeasure(entry[field.key], field.unit)}</span>
+              ${dText ? `<span class="measure-delta ${dCls}">${dText}</span>` : ""}
+            </div>
+          `;
+        }).join("");
+        const vs = entry.vs_date ? ` vs ${entry.vs_date}` : "";
+        return `
+          <article class="measure-entry">
+            <div class="measure-entry-head">
+              <strong>${escapeHtml(entry.date)}</strong>
+              <span class="measure-entry-meta">${escapeHtml(vs)}${entry.note ? ` · ${escapeHtml(entry.note)}` : ""}</span>
+            </div>
+            <div class="measure-chip-row">${chips}</div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    async function loadHistory() {
+      const res = await fetch("/api/measurements");
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || "Failed to load history");
+      if (data.today && !$("#measure-date").value) {
+        $("#measure-date").value = data.today;
+      }
+      renderHistory(data.entries || []);
+      return data;
+    }
+
+    function initialsFromName(name) {
+      const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+      if (!parts.length) return "?";
+      return parts[0][0].toUpperCase();
+    }
+
+    function formatSexLabel(sex) {
+      const s = String(sex || "").trim().toLowerCase();
+      if (s === "male") return "Male";
+      if (s === "female") return "Female";
+      return "";
+    }
+
+    function formatSexAgeLine(user) {
+      const u = user || {};
+      const parts = [];
+      const sexLabel = formatSexLabel(u.sex || u.gender);
+      if (sexLabel) parts.push(sexLabel);
+      if (u.age != null && u.age !== "") parts.push(String(u.age));
+      return parts.join(" · ");
+    }
+
+    function renderIdentity(user) {
+      const u = user || {};
+      const name = u.name || "";
+      const goal = u.goal || "";
+      const sex = String(u.sex || u.gender || "").toLowerCase();
+      $("#profile-name").value = name;
+      $("#profile-sex").value = sex === "male" || sex === "female" ? sex : "";
+      $("#profile-age").value = u.age == null || u.age === "" ? "" : u.age;
+      $("#profile-goal").value = goal;
+      $("#profile-display-name").textContent = name || "Athlete";
+      $("#profile-meta-preview").textContent = formatSexAgeLine(u);
+      $("#profile-avatar").textContent = initialsFromName(name);
+    }
+
+    function renderBodyStats(user) {
+      const grid = $("#body-stats-grid");
+      const u = user || {};
+      grid.innerHTML = BODY_STAT_FIELDS.map((field) => {
+        const raw = u[field.key];
+        const value = raw == null || raw === "" ? "" : raw;
+        return `
+          <label class="body-stat-field">
+            <span class="body-stat-label">${field.label}</span>
+            <span class="body-stat-input-wrap">
+              <input
+                type="number"
+                inputmode="decimal"
+                step="${field.step}"
+                name="${field.key}"
+                value="${escapeHtml(value)}"
+                placeholder="—"
+                data-body-stat="${field.key}"
+              >
+              <span class="body-stat-unit">${field.unit}</span>
+            </span>
+          </label>
+        `;
+      }).join("");
+    }
+
+    function collectPayload() {
+      const ageRaw = $("#profile-age").value.trim();
+      const payload = {
+        name: $("#profile-name").value,
+        sex: $("#profile-sex").value,
+        age: ageRaw === "" ? null : ageRaw,
+        goal: $("#profile-goal").value,
+        date: $("#measure-date").value || null,
+      };
+      document.querySelectorAll("[data-body-stat]").forEach((input) => {
+        payload[input.dataset.bodyStat] = input.value.trim() === "" ? null : input.value;
+      });
+      return payload;
+    }
+
+    function syncHeroFromInputs() {
+      const name = $("#profile-name").value.trim();
+      $("#profile-display-name").textContent = name || "Athlete";
+      $("#profile-meta-preview").textContent = formatSexAgeLine({
+        sex: $("#profile-sex").value,
+        age: $("#profile-age").value.trim(),
+      });
+      $("#profile-avatar").textContent = initialsFromName(name);
+    }
+
+    async function saveProfile() {
+      const status = $("#profile-status");
+      const btn = $("#btn-save-profile");
+      status.textContent = "Saving…";
+      status.className = "body-stats-status";
+      btn.disabled = true;
+      try {
+        const res = await fetch("/api/user/profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(collectPayload()),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.error || "Save failed");
+        status.textContent = "Saved";
+        status.className = "body-stats-status success";
+        renderIdentity(data.user || {});
+        renderBodyStats(data.user || {});
+        if (data.entries) renderHistory(data.entries);
+        else await loadHistory();
+        if (data.measurement) {
+          showToast(`Measurements saved for ${data.measurement.date}`);
+        } else {
+          showToast("Profile saved");
+        }
+      } catch (err) {
+        status.textContent = err.message || "Save failed";
+        status.className = "body-stats-status error";
+        showToast(err.message || "Save failed");
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function loadProfile() {
+      $("#loading").style.display = "block";
+      $("#content").style.display = "none";
+      try {
+        const [userRes, historyData] = await Promise.all([
+          fetch("/api/user").then((r) => r.json()),
+          loadHistory(),
+        ]);
+        if (!userRes.ok) throw new Error(userRes.error || "Failed to load");
+        renderIdentity(userRes.user || {});
+        renderBodyStats(userRes.user || {});
+        if (!$("#measure-date").value && historyData.today) {
+          $("#measure-date").value = historyData.today;
+        }
+        $("#loading").style.display = "none";
+        const content = $("#content");
+        content.style.display = "block";
+        content.classList.remove("content-fade");
+        void content.offsetWidth;
+        content.classList.add("content-fade");
+      } catch (err) {
+        $("#loading").innerHTML = `<p>${escapeHtml(err.message || "Failed to load profile.")}</p>`;
+      }
+    }
+
+    async function uploadFile(endpoint, file, statusEl) {
+      const form = new FormData();
+      form.append("file", file);
+      statusEl.textContent = "…";
+      statusEl.className = "upload-status loading";
+      try {
+        const res = await fetch(endpoint, { method: "POST", body: form });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.error || "Upload failed");
+        statusEl.textContent = "✓";
+        statusEl.className = "upload-status success";
+        showToast(`Imported ${data.filename}`);
+      } catch (err) {
+        statusEl.textContent = "✗";
+        statusEl.className = "upload-status error";
+        showToast(err.message || "Upload failed");
+      }
+    }
+
+    async function refreshWhoopStatus() {
+      const el = $("#whoop-api-status");
+      const connectBtn = $("#whoop-connect");
+      try {
+        const res = await fetch("/api/whoop/status");
+        const data = await res.json();
+        if (!data.has_credentials) {
+          el.textContent = "set credentials";
+          el.className = "upload-status";
+          connectBtn.textContent = "Connect";
+          return;
+        }
+        if (data.connected) {
+          el.textContent = "linked";
+          el.className = "upload-status success";
+          connectBtn.textContent = "Re-link";
+        } else {
+          el.textContent = "not linked";
+          el.className = "upload-status";
+          connectBtn.textContent = "Connect";
+        }
+      } catch (_) {
+        el.textContent = "";
+      }
+    }
+
+    async function syncWhoopApi() {
+      const el = $("#whoop-api-status");
+      el.textContent = "…";
+      el.className = "upload-status loading";
+      try {
+        const res = await fetch("/api/whoop/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: "auto" }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.error || "Whoop sync failed");
+        el.textContent = "✓";
+        el.className = "upload-status success";
+        const count = data.records != null ? ` (${data.records} records)` : "";
+        showToast(`Whoop synced via ${data.method || "api"}${count}`);
+      } catch (err) {
+        el.textContent = "✗";
+        el.className = "upload-status error";
+        showToast(err.message || "Whoop sync failed");
+      }
+    }
+
+    (function handleWhoopCallbackFlash() {
+      const params = new URLSearchParams(window.location.search);
+      const whoop = params.get("whoop");
+      if (!whoop) return;
+      if (whoop === "connected") {
+        showToast("Whoop connected");
+        refreshWhoopStatus();
+      } else if (whoop === "error") {
+        let msg = params.get("msg") || "Whoop connect failed";
+        if (msg.includes("1010") || msg.toLowerCase().includes("browser_signature")) {
+          msg = "Whoop blocked the token request (Cloudflare 1010). Restart dashboard after the User-Agent fix and try Connect again.";
+        } else if (msg.length > 180) {
+          msg = msg.slice(0, 180) + "…";
+        }
+        showToast(msg, 12000);
+      }
+      params.delete("whoop");
+      params.delete("msg");
+      const next = params.toString();
+      const clean = next ? `${window.location.pathname}?${next}` : window.location.pathname;
+      window.history.replaceState({}, "", clean);
+    })();
+
+    initThemeToggle();
+    $("#btn-save-profile").addEventListener("click", saveProfile);
+    $("#jefit-file").addEventListener("change", (e) => {
+      if (e.target.files[0]) uploadFile("/api/upload/jefit", e.target.files[0], $("#jefit-status"));
+      e.target.value = "";
+    });
+    $("#whoop-file").addEventListener("change", (e) => {
+      if (e.target.files[0]) uploadFile("/api/upload/whoop", e.target.files[0], $("#whoop-status"));
+      e.target.value = "";
+    });
+    $("#whoop-sync").addEventListener("click", syncWhoopApi);
+    $("#profile-name").addEventListener("input", syncHeroFromInputs);
+    $("#profile-sex").addEventListener("change", syncHeroFromInputs);
+    $("#profile-age").addEventListener("input", syncHeroFromInputs);
+    $("#body-stats-grid").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        saveProfile();
+      }
+    });
+    loadProfile();
+    refreshWhoopStatus();
+  </script>
+</body>
+</html>

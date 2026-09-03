@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#05070c">
+  <title>FitCoach — Muscle Recovery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --text: #f4f6fa;
+      --text-secondary: #9aa8bc;
+      --text-muted: #6b7a90;
+      --glass: rgba(16, 22, 32, 0.55);
+      --glass-border: rgba(255, 255, 255, 0.09);
+      --green: #34d399;
+      --red: #f87171;
+      --blue: #60a5fa;
+      --accent: #fb923c;
+      --sidebar-w: min(360px, 92vw);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: #05070c;
+      font-family: "Inter", system-ui, sans-serif;
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      display: grid;
+      grid-template-columns: 1fr var(--sidebar-w);
+      grid-template-rows: auto 1fr;
+      height: 100%;
+    }
+
+    .topbar {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.85rem 1.25rem;
+      border-bottom: 1px solid var(--glass-border);
+      background: rgba(8, 12, 18, 0.85);
+      backdrop-filter: blur(12px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .brand-icon {
+      width: 34px; height: 34px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--green), #059669);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.95rem;
+      box-shadow: 0 0 18px rgba(52, 211, 153, 0.35);
+    }
+
+    .brand h1 { font-size: 0.95rem; font-weight: 700; }
+    .brand p { font-size: 0.68rem; color: var(--text-muted); }
+
+    .topbar-nav {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.45rem 0.85rem;
+      border-radius: 10px;
+      border: 1px solid var(--glass-border);
+      background: var(--glass);
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-decoration: none;
+      font-family: inherit;
+    }
+
+    .nav-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+
+    .stage-wrap {
+      position: relative;
+      min-height: 0;
+      touch-action: none;
+      cursor: grab;
+      overflow: hidden;
+      background: #02040a;
+    }
+
+    .stage-wrap:active { cursor: grabbing; }
+
+    .stage-fx {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .stage-fx-nebula {
+      background:
+        radial-gradient(ellipse 55% 40% at 18% 22%, rgba(56, 189, 248, 0.14), transparent 60%),
+        radial-gradient(ellipse 45% 35% at 82% 18%, rgba(251, 146, 60, 0.1), transparent 55%),
+        radial-gradient(ellipse 70% 50% at 50% 85%, rgba(16, 185, 129, 0.08), transparent 60%),
+        radial-gradient(ellipse 90% 70% at 50% 40%, rgba(8, 20, 40, 0.35), transparent 70%);
+      animation: nebula-drift 28s ease-in-out infinite alternate;
+    }
+
+    .stage-fx-grid {
+      background-image:
+        linear-gradient(rgba(96, 165, 250, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(96, 165, 250, 0.05) 1px, transparent 1px);
+      background-size: 48px 48px;
+      background-position: center bottom;
+      mask-image: linear-gradient(to top, rgba(0,0,0,0.45), transparent 55%);
+      -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.45), transparent 55%);
+      transform: perspective(420px) rotateX(58deg) scale(1.6);
+      transform-origin: center bottom;
+      opacity: 0.55;
+      animation: grid-pulse 6s ease-in-out infinite;
+    }
+
+    .stage-fx-horizon {
+      background:
+        linear-gradient(to top, rgba(56, 189, 248, 0.22), transparent 42%),
+        radial-gradient(ellipse 80% 28% at 50% 100%, rgba(52, 211, 153, 0.18), transparent 70%);
+      opacity: 0.7;
+    }
+
+    .stage-fx-scan {
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent 2px,
+        rgba(0, 0, 0, 0.12) 2px,
+        rgba(0, 0, 0, 0.12) 3px
+      );
+      opacity: 0.35;
+      mix-blend-mode: multiply;
+    }
+
+    .stage-fx-vignette {
+      background:
+        radial-gradient(ellipse 70% 65% at 50% 42%, transparent 35%, rgba(2, 4, 10, 0.75) 100%);
+    }
+
+    .stage-fx-beam {
+      background: linear-gradient(
+        105deg,
+        transparent 38%,
+        rgba(255, 255, 255, 0.03) 46%,
+        rgba(96, 165, 250, 0.06) 50%,
+        rgba(255, 255, 255, 0.03) 54%,
+        transparent 62%
+      );
+      animation: beam-sweep 14s ease-in-out infinite;
+    }
+
+    @keyframes nebula-drift {
+      from { transform: scale(1) translate(0, 0); }
+      to { transform: scale(1.06) translate(-1.5%, 1%); }
+    }
+
+    @keyframes grid-pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0.65; }
+    }
+
+    @keyframes beam-sweep {
+      0%, 100% { transform: translateX(-8%); opacity: 0.35; }
+      50% { transform: translateX(8%); opacity: 0.7; }
+    }
+
+    #mannequin-scene {
+      position: relative;
+      z-index: 2;
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .stage-hint {
+      position: absolute;
+      z-index: 3;
+      left: 50%;
+      bottom: 1.25rem;
+      transform: translateX(-50%);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      pointer-events: none;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      background: rgba(8, 12, 18, 0.55);
+      border: 1px solid rgba(96, 165, 250, 0.18);
+      backdrop-filter: blur(8px);
+    }
+
+    .sidebar {
+      border-left: 1px solid var(--glass-border);
+      background: rgba(10, 14, 21, 0.92);
+      backdrop-filter: blur(20px);
+      padding: 1.25rem 1.1rem;
+      overflow-y: auto;
+      min-height: 0;
+    }
+
+    .sidebar h2 {
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.25rem;
+    }
+
+    .sidebar-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      line-height: 1.45;
+    }
+
+    .legend {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.45rem;
+      margin-bottom: 1rem;
+    }
+
+    .legend-item {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      padding: 0.55rem 0.6rem;
+      text-align: center;
+    }
+
+    .legend-item b {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 800;
+      margin-bottom: 0.15rem;
+    }
+
+    .legend-item span {
+      font-size: 0.58rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+
+    .muscle-list {
+      list-style: none;
+    }
+
+    .muscle-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.75rem;
+      padding: 0.55rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 0.82rem;
+    }
+
+    .muscle-list li:last-child { border-bottom: none; }
+
+    .muscle-list li.is-hit {
+      background: rgba(255, 255, 255, 0.05);
+      margin: 0 -0.45rem;
+      padding: 0.55rem 0.45rem;
+      border-radius: 10px;
+    }
+
+    .muscle-list li > span:last-child {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.08rem;
+    }
+
+    .mp-rate { font-weight: 800; }
+    .mp-time { font-size: 0.7rem; color: var(--text-muted); }
+
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: #05070c;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    .loading-overlay.hide { opacity: 0; pointer-events: none; transition: opacity 0.4s ease; }
+
+    .loader {
+      width: 36px; height: 36px;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-top-color: var(--green);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-overlay p { font-size: 0.8rem; color: var(--text-muted); }
+
+    .zone-green { color: var(--green); }
+    .zone-orange { color: var(--accent); }
+    .zone-red { color: var(--red); }
+    .zone-unknown, .zone-muted { color: var(--text-muted); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .stage-fx-nebula,
+      .stage-fx-grid,
+      .stage-fx-beam { animation: none; }
+    }
+
+    @media (max-width: 820px) {
+      .page {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr auto;
+      }
+
+      .sidebar {
+        border-left: none;
+        border-top: 1px solid var(--glass-border);
+        max-height: 42vh;
+      }
+
+      .stage-hint { bottom: 0.75rem; }
+    }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div class="loading-overlay" id="loading">
+    <div class="loader"></div>
+    <p>Loading muscle recovery…</p>
+  </div>
+
+  <div class="page">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon">🧍</div>
+        <div>
+          <h1>Muscle Recovery</h1>
+          <p id="page-sub">3D view · Jefit + Whoop</p>
+        </div>
+      </div>
+      <nav class="topbar-nav">
+        <a class="nav-btn" href="/">◱ Classic</a>
+        <a class="nav-btn" href="/immersive">✦ Orbit</a>
+      </nav>
+    </header>
+
+    <div class="stage-wrap" id="stage-wrap">
+      <div class="stage-fx stage-fx-nebula" aria-hidden="true"></div>
+      <div class="stage-fx stage-fx-grid" aria-hidden="true"></div>
+      <div class="stage-fx stage-fx-horizon" aria-hidden="true"></div>
+      <div class="stage-fx stage-fx-beam" aria-hidden="true"></div>
+      <div class="stage-fx stage-fx-scan" aria-hidden="true"></div>
+      <div class="stage-fx stage-fx-vignette" aria-hidden="true"></div>
+      <canvas id="mannequin-scene"></canvas>
+      <p class="stage-hint">Drag to rotate · tap a muscle</p>
+    </div>
+
+    <aside class="sidebar">
+      <h2>Recovery by muscle</h2>
+      <p class="sidebar-sub" id="muscle-panel-sub">From Jefit · sped by Whoop sleep & recovery</p>
+      <div class="legend" id="muscle-panel-legend">
+        <div class="legend-item"><b class="zone-green">100%</b><span>Ready</span></div>
+        <div class="legend-item"><b class="zone-orange">80–99%</b><span>Almost</span></div>
+        <div class="legend-item"><b class="zone-red">1–79%</b><span>Repairing</span></div>
+      </div>
+      <ul class="muscle-list" id="muscle-panel-list"></ul>
+    </aside>
+  </div>
+
+  <script type="module">
+    import * as THREE from "three";
+
+    const $ = (s) => document.querySelector(s);
+
+    const MUSCLE_HEX = {
+      green: 0x34d399,
+      orange: 0xfb923c,
+      red: 0xf87171,
+      muted: 0x4b5568,
+      unknown: 0x4b5568,
+    };
+    const SIL_HEX = 0x4a5563;
+
+    const canvas = $("#mannequin-scene");
+    const stage = $("#stage-wrap");
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.setClearColor(0x000000, 0);
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x02040a, 0.085);
+
+    const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 80);
+    camera.position.set(0, 0.98, 3.65);
+    camera.lookAt(0, 0.78, 0);
+
+    scene.add(new THREE.HemisphereLight(0xb8c9de, 0x0a121c, 0.55));
+    const key = new THREE.DirectionalLight(0xffffff, 1.05);
+    key.position.set(1.8, 3.2, 2.8);
+    scene.add(key);
+    const fill = new THREE.DirectionalLight(0x38bdf8, 0.4);
+    fill.position.set(-2.2, 1.0, -1.6);
+    scene.add(fill);
+    const rim = new THREE.DirectionalLight(0xfb923c, 0.22);
+    rim.position.set(0.2, 1.4, -2.6);
+    scene.add(rim);
+    const floorGlow = new THREE.PointLight(0x34d399, 0.55, 6, 2);
+    floorGlow.position.set(0, 0.2, 0.4);
+    scene.add(floorGlow);
+
+    const mannequin = new THREE.Group();
+    mannequin.position.y = -0.08;
+    scene.add(mannequin);
+    const muscleMeshes = {};
+    const manPick = [];
+
+    // Starfield
+    const starCount = 900;
+    const starPos = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i++) {
+      const r = 18 + Math.random() * 40;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      starPos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      starPos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta) * 0.55 + 4;
+      starPos[i * 3 + 2] = r * Math.cos(phi) - 8;
+    }
+    const starsGeo = new THREE.BufferGeometry();
+    starsGeo.setAttribute("position", new THREE.BufferAttribute(starPos, 3));
+    const stars = new THREE.Points(
+      starsGeo,
+      new THREE.PointsMaterial({
+        color: 0xc8d8f0,
+        size: 0.045,
+        sizeAttenuation: true,
+        transparent: true,
+        opacity: 0.85,
+        depthWrite: false,
+      })
+    );
+    stars.name = "stars";
+    scene.add(stars);
+
+    // Dust motes near the figure
+    const dustCount = 120;
+    const dustPos = new Float32Array(dustCount * 3);
+    for (let i = 0; i < dustCount; i++) {
+      dustPos[i * 3] = (Math.random() - 0.5) * 3.2;
+      dustPos[i * 3 + 1] = Math.random() * 2.4 - 0.2;
+      dustPos[i * 3 + 2] = (Math.random() - 0.5) * 2.4;
+    }
+    const dustGeo = new THREE.BufferGeometry();
+    dustGeo.setAttribute("position", new THREE.BufferAttribute(dustPos, 3));
+    const dust = new THREE.Points(
+      dustGeo,
+      new THREE.PointsMaterial({
+        color: 0x7dd3fc,
+        size: 0.018,
+        transparent: true,
+        opacity: 0.35,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      })
+    );
+    dust.name = "dust";
+    scene.add(dust);
+
+    // Sci-fi floor: pad + perspective grid
+    const pad = new THREE.Mesh(
+      new THREE.CircleGeometry(0.72, 48),
+      new THREE.MeshStandardMaterial({
+        color: 0x0c1520,
+        emissive: 0x0ea5e9,
+        emissiveIntensity: 0.12,
+        metalness: 0.55,
+        roughness: 0.35,
+        transparent: true,
+        opacity: 0.85,
+      })
+    );
+    pad.rotation.x = -Math.PI / 2;
+    pad.position.y = -0.14;
+    scene.add(pad);
+
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.74, 0.78, 64),
+      new THREE.MeshBasicMaterial({
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.45,
+        side: THREE.DoubleSide,
+      })
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = -0.135;
+    scene.add(ring);
+
+    const outerRing = new THREE.Mesh(
+      new THREE.RingGeometry(1.05, 1.08, 64),
+      new THREE.MeshBasicMaterial({
+        color: 0x34d399,
+        transparent: true,
+        opacity: 0.22,
+        side: THREE.DoubleSide,
+      })
+    );
+    outerRing.rotation.x = -Math.PI / 2;
+    outerRing.position.y = -0.135;
+    scene.add(outerRing);
+
+    function makeFloorGrid(size, divisions, color, opacity) {
+      const half = size / 2;
+      const step = size / divisions;
+      const pts = [];
+      for (let i = 0; i <= divisions; i++) {
+        const t = -half + i * step;
+        pts.push(-half, 0, t, half, 0, t);
+        pts.push(t, 0, -half, t, 0, half);
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
+      return new THREE.LineSegments(
+        geo,
+        new THREE.LineBasicMaterial({
+          color,
+          transparent: true,
+          opacity,
+          depthWrite: false,
+        })
+      );
+    }
+
+    const grid = makeFloorGrid(14, 28, 0x1e3a5f, 0.35);
+    grid.position.y = -0.145;
+    scene.add(grid);
+    const gridFine = makeFloorGrid(14, 56, 0x0ea5e9, 0.08);
+    gridFine.position.y = -0.144;
+    scene.add(gridFine);
+
+    const clock = new THREE.Clock();
+
+    function muscleMaterial(hex) {
+      return new THREE.MeshStandardMaterial({
+        color: hex,
+        roughness: 0.42,
+        metalness: 0.08,
+        emissive: hex,
+        emissiveIntensity: hex === SIL_HEX ? 0.04 : 0.18,
+      });
+    }
+
+    function addPart(geo, key, x, y, z, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1) {
+      const mesh = new THREE.Mesh(geo, muscleMaterial(SIL_HEX));
+      mesh.position.set(x, y, z);
+      mesh.rotation.set(rx, ry, rz);
+      mesh.scale.set(sx, sy, sz);
+      mesh.userData.muscle = key;
+      mannequin.add(mesh);
+      if (key) {
+        (muscleMeshes[key] ||= []).push(mesh);
+        manPick.push(mesh);
+      }
+      return mesh;
+    }
+
+    function buildMannequin() {
+      addPart(new THREE.SphereGeometry(0.13, 20, 16), null, 0, 1.72, 0.01);
+      addPart(new THREE.CylinderGeometry(0.05, 0.07, 0.09, 12), null, 0, 1.56, 0);
+
+      addPart(new THREE.SphereGeometry(0.11, 16, 14), "shoulders", -0.24, 1.44, 0.01, 0, 0, 0, 1.15, 0.9, 0.95);
+      addPart(new THREE.SphereGeometry(0.11, 16, 14), "shoulders", 0.24, 1.44, 0.01, 0, 0, 0, 1.15, 0.9, 0.95);
+
+      addPart(new THREE.SphereGeometry(0.145, 18, 14), "chest", -0.1, 1.32, 0.08, 0, 0, 0, 1.12, 0.82, 0.72);
+      addPart(new THREE.SphereGeometry(0.145, 18, 14), "chest", 0.1, 1.32, 0.08, 0, 0, 0, 1.12, 0.82, 0.72);
+      addPart(new THREE.CapsuleGeometry(0.09, 0.18, 6, 12), "abs", 0, 1.08, 0.05, 0, 0, 0, 1.15, 1, 0.72);
+
+      addPart(new THREE.CapsuleGeometry(0.13, 0.28, 6, 12), "back", 0, 1.24, -0.07, 0, 0, 0, 1.15, 1, 0.55);
+
+      addPart(new THREE.CapsuleGeometry(0.052, 0.2, 6, 12), "biceps", -0.32, 1.18, 0.05, 0, 0, 0.22);
+      addPart(new THREE.CapsuleGeometry(0.052, 0.2, 6, 12), "biceps", 0.32, 1.18, 0.05, 0, 0, -0.22);
+      addPart(new THREE.CapsuleGeometry(0.048, 0.2, 6, 12), "triceps", -0.32, 1.16, -0.05, 0, 0, 0.22);
+      addPart(new THREE.CapsuleGeometry(0.048, 0.2, 6, 12), "triceps", 0.32, 1.16, -0.05, 0, 0, -0.22);
+
+      addPart(new THREE.CapsuleGeometry(0.04, 0.2, 6, 12), "forearms", -0.4, 0.86, 0.04, 0, 0, 0.28);
+      addPart(new THREE.CapsuleGeometry(0.04, 0.2, 6, 12), "forearms", 0.4, 0.86, 0.04, 0, 0, -0.28);
+      addPart(new THREE.SphereGeometry(0.042, 12, 10), null, -0.46, 0.68, 0.03);
+      addPart(new THREE.SphereGeometry(0.042, 12, 10), null, 0.46, 0.68, 0.03);
+
+      addPart(new THREE.SphereGeometry(0.11, 16, 12), "glutes", -0.09, 0.8, -0.07, 0, 0, 0, 1.05, 0.9, 0.95);
+      addPart(new THREE.SphereGeometry(0.11, 16, 12), "glutes", 0.09, 0.8, -0.07, 0, 0, 0, 1.05, 0.9, 0.95);
+
+      addPart(new THREE.CapsuleGeometry(0.078, 0.32, 6, 12), "upper_leg", -0.11, 0.5, 0.02);
+      addPart(new THREE.CapsuleGeometry(0.078, 0.32, 6, 12), "upper_leg", 0.11, 0.5, 0.02);
+      addPart(new THREE.CapsuleGeometry(0.052, 0.3, 6, 12), "lower_leg", -0.11, 0.1, 0);
+      addPart(new THREE.CapsuleGeometry(0.052, 0.3, 6, 12), "lower_leg", 0.11, 0.1, 0);
+      addPart(new THREE.BoxGeometry(0.09, 0.04, 0.15), null, -0.11, -0.08, 0.04);
+      addPart(new THREE.BoxGeometry(0.09, 0.04, 0.15), null, 0.11, -0.08, 0.04);
+    }
+
+    buildMannequin();
+
+    function zoneClass(zone) {
+      if (zone === "orange") return "zone-orange";
+      return `zone-${zone || "unknown"}`;
+    }
+
+    function zoneForRate(rate, hasTraining) {
+      if (!hasTraining && rate === 100) return "green";
+      if (rate >= 100) return "green";
+      if (rate >= 80) return "orange";
+      if (rate >= 1) return "red";
+      return "muted";
+    }
+
+    function formatRemaining(remainingMin) {
+      if (!remainingMin || remainingMin <= 0) return "—";
+      if (remainingMin < 60) return `${remainingMin}m`;
+      const h = Math.floor(remainingMin / 60);
+      const m = remainingMin % 60;
+      return m ? `${h}h ${m}m` : `${h}h`;
+    }
+
+    function muscleLastTrainedMs(m) {
+      if (m.last_trained_ms != null) return Number(m.last_trained_ms);
+      if (!m.last_trained) return null;
+      const t = Date.parse(m.last_trained);
+      return Number.isFinite(t) ? t : null;
+    }
+
+    function liveMuscleSnapshot(m, nowMs) {
+      const windowH = Number(m.recovery_hours);
+      let speed = Number(m.speed_multiplier);
+      if (!Number.isFinite(speed) || speed <= 0) speed = 1;
+      speed = Math.min(1.35, Math.max(0.65, speed));
+      const lastMs = muscleLastTrainedMs(m);
+      const hasTraining = lastMs != null;
+      if (!hasTraining || !Number.isFinite(windowH) || windowH <= 0) {
+        return { ...m, rate: 100, remaining_min: 0, remaining_label: "—", zone: "green" };
+      }
+      const elapsedH = Math.max(0, (nowMs - lastMs) / 3600000);
+      const elapsedEff = elapsedH * speed;
+      let rate = Math.round(Math.max(0, Math.min(100, 100 * elapsedEff / windowH)));
+      let remainingH = Math.max(0, windowH / speed - elapsedH);
+      let remainingMin = remainingH > 0 ? Math.round(remainingH * 60) : 0;
+      if (rate >= 100) {
+        rate = 100;
+        remainingMin = 0;
+      }
+      return {
+        ...m,
+        rate,
+        remaining_min: remainingMin,
+        remaining_label: formatRemaining(rate < 100 ? remainingMin : 0),
+        zone: zoneForRate(rate, hasTraining),
+      };
+    }
+
+    function paintMannequin(muscles) {
+      const byKey = {};
+      (muscles || []).forEach((m) => { byKey[m.key] = m; });
+      Object.entries(muscleMeshes).forEach(([key, meshes]) => {
+        const row = byKey[key];
+        const zone = (row && row.zone) || "unknown";
+        const hex = MUSCLE_HEX[zone] || MUSCLE_HEX.unknown;
+        meshes.forEach((mesh) => {
+          mesh.material.color.setHex(hex);
+          mesh.material.emissive.setHex(hex);
+          mesh.material.emissiveIntensity = 0.18;
+        });
+      });
+    }
+
+    function renderMuscleList(muscles, focusKey) {
+      const list = $("#muscle-panel-list");
+      list.innerHTML = (muscles || []).map((m) => {
+        const cls = zoneClass(m.zone);
+        const hit = focusKey && m.key === focusKey ? "is-hit" : "";
+        return `<li class="${hit}" data-key="${m.key}">
+          <span>${m.name}</span>
+          <span>
+            <span class="mp-rate ${cls}">${m.rate}%</span>
+            <span class="mp-time">${m.remaining_label || "—"}</span>
+          </span>
+        </li>`;
+      }).join("") || "<li>No muscle data yet</li>";
+
+      if (focusKey) {
+        const row = list.querySelector(`[data-key="${focusKey}"]`);
+        if (row) row.scrollIntoView({ block: "nearest" });
+      }
+    }
+
+    let muscleData = [];
+    let focusKey = null;
+    let liveTimer = null;
+
+    function applyLive() {
+      if (!muscleData.length) return;
+      const nowMs = Date.now();
+      const live = muscleData.map((m) => liveMuscleSnapshot(m, nowMs));
+      paintMannequin(live);
+      renderMuscleList(live, focusKey);
+    }
+
+    function resize() {
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      if (!w || !h) return;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+
+    let rotY = 0.42;
+    let dragging = false;
+    let lastX = 0;
+    let moved = 0;
+    const ray = new THREE.Raycaster();
+    const ptr = new THREE.Vector2();
+
+    function setPointer(e) {
+      const r = canvas.getBoundingClientRect();
+      ptr.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+      ptr.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+    }
+
+    function pickMuscle(e) {
+      setPointer(e);
+      ray.setFromCamera(ptr, camera);
+      const hit = ray.intersectObjects(manPick, false)[0];
+      return hit && hit.object.userData.muscle ? hit.object.userData.muscle : null;
+    }
+
+    stage.addEventListener("pointerdown", (e) => {
+      dragging = true;
+      moved = 0;
+      lastX = e.clientX;
+      stage.setPointerCapture(e.pointerId);
+    });
+    stage.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - lastX;
+      lastX = e.clientX;
+      moved += Math.abs(dx);
+      rotY += dx * 0.014;
+    });
+    stage.addEventListener("pointerup", (e) => {
+      if (!dragging) return;
+      dragging = false;
+      if (moved < 8) {
+        focusKey = pickMuscle(e);
+        applyLive();
+      }
+    });
+    stage.addEventListener("pointercancel", () => { dragging = false; });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+      mannequin.rotation.y = rotY;
+
+      stars.rotation.y = t * 0.008;
+      dust.rotation.y = t * 0.03;
+      dust.position.y = Math.sin(t * 0.4) * 0.04;
+      ring.material.opacity = 0.35 + Math.sin(t * 1.4) * 0.12;
+      outerRing.material.opacity = 0.16 + Math.sin(t * 0.9 + 1) * 0.08;
+      floorGlow.intensity = 0.45 + Math.sin(t * 1.2) * 0.12;
+
+      renderer.render(scene, camera);
+    }
+
+    async function loadRecovery() {
+      const res = await fetch("/api/muscle-recovery");
+      if (!res.ok) throw new Error("muscle-recovery failed");
+      const data = await res.json();
+      muscleData = data.muscles || [];
+      const speed = data.modifiers && data.modifiers.speed_multiplier;
+      if (speed) {
+        $("#muscle-panel-sub").textContent =
+          `Repair speed ${Number(speed).toFixed(2)}× · Jefit + Whoop`;
+      }
+      applyLive();
+      if (liveTimer) clearInterval(liveTimer);
+      liveTimer = setInterval(applyLive, 1000);
+    }
+
+    addEventListener("resize", resize);
+
+    (async () => {
+      resize();
+      try {
+        await loadRecovery();
+      } catch {
+        $("#muscle-panel-sub").textContent = "Could not load recovery data";
+      }
+      $("#loading").classList.add("hide");
+      animate();
+    })();
+  </script>
+</body>
+</html>

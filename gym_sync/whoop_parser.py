@@ -82,6 +82,7 @@ def parse_whoop_export(source: Path) -> dict[str, list[dict]]:
                     "sleep_debt_min": _float(row.get("Sleep debt (min)")),
                     "deep_min": _float(row.get("Deep (SWS) duration (min)")),
                     "rem_min": _float(row.get("REM duration (min)")),
+                    "light_min": _float(row.get("Light sleep duration (min)")),
                     "calories": _int(row.get("Energy burned (cal)")),
                 }
             )
@@ -135,22 +136,30 @@ def _int(value: str | None) -> int | None:
         return None
 
 
-def load_whoop_into_db(conn, source: Path) -> int:
+def upsert_whoop_data(
+    conn,
+    daily: list[dict],
+    workouts: list[dict],
+    journal: list[dict],
+    source: str,
+    *,
+    log_source: str = "whoop",
+) -> int:
+    """Upsert normalized Whoop rows into SQLite. Used by export import and API sync."""
     from datetime import datetime, timezone
 
     from .db import log_import
 
-    data = parse_whoop_export(source)
     now = datetime.now(timezone.utc).isoformat()
     count = 0
 
-    for row in data["daily"]:
+    for row in daily:
         conn.execute(
             """
             INSERT INTO whoop_daily (
                 date, recovery, hrv, rhr, day_strain, sleep_hours, sleep_performance,
-                sleep_debt_min, deep_min, rem_min, calories, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                sleep_debt_min, deep_min, rem_min, light_min, calories, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(date) DO UPDATE SET
                 recovery=excluded.recovery,
                 hrv=excluded.hrv,
@@ -161,6 +170,7 @@ def load_whoop_into_db(conn, source: Path) -> int:
                 sleep_debt_min=excluded.sleep_debt_min,
                 deep_min=excluded.deep_min,
                 rem_min=excluded.rem_min,
+                light_min=excluded.light_min,
                 calories=excluded.calories,
                 updated_at=excluded.updated_at
             """,
@@ -175,13 +185,14 @@ def load_whoop_into_db(conn, source: Path) -> int:
                 row["sleep_debt_min"],
                 row["deep_min"],
                 row["rem_min"],
+                row.get("light_min"),
                 row["calories"],
                 now,
             ),
         )
         count += 1
 
-    for row in data["workouts"]:
+    for row in workouts:
         conn.execute(
             """
             INSERT INTO whoop_workouts (date, start_time, activity, duration_min, strain, avg_hr, calories)
@@ -204,7 +215,7 @@ def load_whoop_into_db(conn, source: Path) -> int:
         )
         count += 1
 
-    for row in data["journal"]:
+    for row in journal:
         conn.execute(
             """
             INSERT INTO whoop_journal (date, question, answered_yes)
@@ -216,5 +227,17 @@ def load_whoop_into_db(conn, source: Path) -> int:
         count += 1
 
     conn.commit()
-    log_import(conn, "whoop", str(source), count)
+    log_import(conn, log_source, source, count)
     return count
+
+
+def load_whoop_into_db(conn, source: Path) -> int:
+    data = parse_whoop_export(source)
+    return upsert_whoop_data(
+        conn,
+        data["daily"],
+        data["workouts"],
+        data["journal"],
+        str(source),
+        log_source="whoop",
+    )

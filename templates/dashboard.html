@@ -17,7 +17,8 @@
       if (meta) meta.setAttribute("content", theme === "light" ? "#f0f4f9" : "#080b10");
     })();
   </script>
-  <link rel="stylesheet" href="/static/dashboard.css?v=10">
+  <link rel="stylesheet" href="/static/dashboard.css?v=38">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <div class="app">
@@ -34,25 +35,12 @@
           <button type="button" class="theme-btn" data-theme="dark" id="theme-dark">Dark</button>
           <button type="button" class="theme-btn" data-theme="light" id="theme-light">Light</button>
         </div>
+        <a class="btn-text" href="/profile" id="btn-profile" title="View profile">Profile</a>
+        <a class="btn-icon" href="/mannequin" title="3D muscle recovery">🧍</a>
         <a class="btn-icon" href="/immersive" title="3D orbit view">✦</a>
         <button class="btn-icon" id="btn-refresh" title="Refresh">↻</button>
       </div>
     </header>
-
-    <div class="upload-bar">
-      <label class="upload-chip upload-jefit">
-        <span class="chip-dot"></span>
-        <span>Jefit</span>
-        <input type="file" id="jefit-file" accept=".csv,text/csv">
-        <small id="jefit-status"></small>
-      </label>
-      <label class="upload-chip upload-whoop">
-        <span class="chip-dot"></span>
-        <span>Whoop</span>
-        <input type="file" id="whoop-file" accept=".zip,.csv,application/zip,text/csv">
-        <small id="whoop-status"></small>
-      </label>
-    </div>
 
     <div id="loading" class="loading">
       <div class="loader"></div>
@@ -61,12 +49,13 @@
 
     <div id="content" style="display:none;">
 
+      <section class="vitals-row" id="vitals-row" aria-label="Today's vitals"></section>
+
       <section class="hero zone-unknown" id="hero-section">
         <div class="hero-top">
           <div>
             <p class="hero-greeting" id="briefing-date">Morning Briefing</p>
             <h2 class="hero-headline" id="briefing-headline"></h2>
-            <p class="hero-sub" id="briefing-user"></p>
           </div>
           <div class="recovery-ring-wrap" id="briefing-recovery"></div>
         </div>
@@ -82,12 +71,64 @@
 
       <div class="metric-row" id="metric-row"></div>
 
+      <section class="card section body-stats-card body-stats-summary-card">
+        <div class="body-stats-head">
+          <div>
+            <div class="card-inner-title">Body Stats</div>
+            <p class="body-stats-sub" id="body-stats-summary-sub">Key metrics from your profile</p>
+          </div>
+          <a class="btn-text" href="/profile">View profile</a>
+        </div>
+        <div class="body-stats-summary" id="body-stats-summary"></div>
+      </section>
+
       <section class="section">
         <div class="section-head">
           <span class="section-title">This Week</span>
           <span class="section-sub">Plan vs actual</span>
         </div>
         <div class="week-scroll" id="week-strip"></div>
+      </section>
+
+      <section class="section trends-section" id="trends-section">
+        <div class="section-head">
+          <span class="section-title">Trends</span>
+          <span class="section-sub" id="trends-sub">Last 14 days</span>
+        </div>
+        <div class="trends-grid">
+          <div class="chart-card">
+            <div class="chart-card-head">
+              <span class="chart-card-title">Recovery %</span>
+              <span class="chart-card-meta" id="chart-recovery-meta"></span>
+            </div>
+            <div class="chart-wrap" id="chart-recovery-wrap">
+              <canvas id="chart-recovery" aria-label="Recovery trend"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-card-head">
+              <span class="chart-card-title">Sleep hours</span>
+              <span class="chart-card-meta" id="chart-sleep-meta"></span>
+            </div>
+            <div class="chart-wrap" id="chart-sleep-wrap">
+              <canvas id="chart-sleep" aria-label="Sleep trend"></canvas>
+            </div>
+          </div>
+          <div class="chart-card chart-card-volume">
+            <div class="chart-card-head">
+              <span class="chart-card-title">Training volume</span>
+              <span class="chart-card-meta" id="chart-volume-meta"></span>
+            </div>
+            <div class="chart-range" role="group" aria-label="Volume range">
+              <button type="button" class="chart-range-btn active" data-volume-range="7d">Week</button>
+              <button type="button" class="chart-range-btn" data-volume-range="month">Monthly</button>
+              <button type="button" class="chart-range-btn" data-volume-range="year">Yearly</button>
+            </div>
+            <div class="chart-wrap" id="chart-volume-wrap">
+              <canvas id="chart-volume" aria-label="Training volume"></canvas>
+            </div>
+          </div>
+        </div>
       </section>
 
       <div class="grid grid-2">
@@ -100,20 +141,27 @@
         <section class="card">
           <div class="card-inner-title">Coaching Insights</div>
           <ul class="insights-list" id="insights-list"></ul>
+          <button type="button" id="insights-more" class="btn-text log-more-btn" hidden>More</button>
         </section>
       </div>
 
-      <div class="grid grid-2" style="margin-top:1rem;">
-        <section class="card">
-          <div class="card-inner-title">Last Workout</div>
-          <div id="last-workout"></div>
-        </section>
+      <section class="card" style="margin-top:1rem;">
+        <div class="card-inner-title">Last Workout</div>
+        <div id="last-workout"></div>
+      </section>
 
-        <section class="card">
-          <div class="card-inner-title">Recent Imports</div>
-          <div class="import-log" id="import-log"></div>
-        </section>
-      </div>
+      <section class="card section muscle-recovery-entry" style="margin-top:1rem;">
+        <div class="muscle-recovery-launch-row">
+          <button type="button" class="muscle-recovery-launch" id="btn-muscle-recovery" aria-haspopup="dialog">
+            <div class="muscle-recovery-launch-text">
+              <div class="card-inner-title">Muscle Recovery</div>
+              <p class="muscle-recovery-launch-sub" id="muscle-recovery-teaser">Per-muscle recovery from your Jefit history</p>
+            </div>
+            <span class="muscle-recovery-launch-cta">View</span>
+          </button>
+          <a class="btn-text muscle-recovery-3d-link" href="/mannequin">3D view</a>
+        </div>
+      </section>
 
       <section class="card section" style="margin-top:1rem;">
         <div class="card-inner-title">Activity Log</div>
@@ -131,12 +179,13 @@
             <tbody id="daily-log"></tbody>
           </table>
         </div>
+        <button type="button" id="daily-log-more" class="btn-text log-more-btn" hidden>More</button>
       </section>
     </div>
   </div>
 
   <div id="modal" class="modal-backdrop">
-    <div class="modal">
+    <div class="modal" id="modal-panel">
       <div class="modal-handle"></div>
       <button class="modal-close" id="modal-close">Close</button>
       <h3 id="modal-title">Workout</h3>
@@ -163,6 +212,8 @@
       document.querySelectorAll(".theme-btn").forEach((btn) => {
         btn.classList.toggle("active", btn.dataset.theme === theme);
       });
+      if (window.__trendsCache) renderTrends(window.__trendsCache);
+      if (volumeTrendsCache) renderVolumeChart(volumeTrendsCache);
     }
 
     function initThemeToggle() {
@@ -183,22 +234,75 @@
       return v == null ? "—" : `${Number(v).toFixed(1)}h`;
     }
 
-    function recoveryRing(pct, zone, size = 108) {
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function formatSexLabel(sex) {
+      const s = String(sex || "").trim().toLowerCase();
+      if (s === "male") return "Male";
+      if (s === "female") return "Female";
+      return "";
+    }
+
+    function formatSexAgeLine(user) {
+      const u = user || {};
+      const parts = [];
+      const sexLabel = formatSexLabel(u.sex || u.gender);
+      if (sexLabel) parts.push(sexLabel);
+      if (u.age != null && u.age !== "") parts.push(String(u.age));
+      return parts.join(" · ");
+    }
+
+    function vitalIdentity(user) {
+      const u = user || {};
+      const name = (u.name && String(u.name).trim()) || "Athlete";
+      const meta = formatSexAgeLine(u);
+      return `
+        <div class="vital-identity">
+          <p class="vital-identity-name">${escapeHtml(name)}</p>
+          ${meta ? `<p class="vital-identity-meta">${escapeHtml(meta)}</p>` : ""}
+        </div>`;
+    }
+
+    function formatRingValue(text) {
+      const s = String(text);
+      const m = s.match(/^(-?\d+(?:\.\d+)?)(%)$/);
+      if (m) {
+        return `<span class="vital-ring-num">${m[1]}</span><span class="vital-ring-pct">%</span>`;
+      }
+      return `<span class="vital-ring-num">${escapeHtml(s)}</span>`;
+    }
+
+    function vitalRing({ pct, display, label, sub, colorClass = "", size = 100, clickable = false, ringId = "" }) {
       const r = (size - 10) / 2;
       const cx = size / 2;
       const circ = 2 * Math.PI * r;
-      const offset = pct != null ? circ - (Math.min(pct, 100) / 100) * circ : circ;
-      const display = pct != null ? Math.round(pct) : "—";
+      const clamped = pct != null ? Math.max(0, Math.min(100, pct)) : null;
+      const offset = clamped != null ? circ - (clamped / 100) * circ : circ;
+      const centerText = display != null ? display : (clamped != null ? `${Math.round(clamped)}%` : "—");
+      const widgetClass = clickable ? "vital-widget vital-widget-clickable" : "vital-widget";
+      const idAttr = ringId ? ` id="${ringId}"` : "";
+      const roleAttr = clickable ? ' role="button" tabindex="0"' : "";
+      const ariaLabel = clickable ? ` aria-label="View ${label} details"` : "";
       return `
-        <svg class="recovery-ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-          <circle class="ring-bg" cx="${cx}" cy="${cx}" r="${r}"/>
-          <circle class="ring-fill ${zoneClass(zone)}" cx="${cx}" cy="${cx}" r="${r}"
-            stroke-dasharray="${circ}" stroke-dashoffset="${offset}"
-            transform="rotate(-90 ${cx} ${cx})"/>
-          <text x="${cx}" y="${cx - 2}" text-anchor="middle" class="ring-center">${display}</text>
-          <text x="${cx}" y="${cx + 16}" text-anchor="middle" class="ring-center-sub">recovery</text>
-        </svg>
-        <div class="ring-label ${zoneClass(zone)}">${zone === "unknown" ? "No data" : zone.toUpperCase()}</div>`;
+        <div class="${widgetClass}"${idAttr}${roleAttr}${ariaLabel}>
+          <div class="vital-ring-stage" style="width:${size}px;height:${size}px">
+            <svg class="vital-ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true">
+              <circle class="ring-bg" cx="${cx}" cy="${cx}" r="${r}"/>
+              <circle class="ring-fill ${colorClass}" cx="${cx}" cy="${cx}" r="${r}"
+                stroke-dasharray="${circ}" stroke-dashoffset="${offset}"
+                transform="rotate(-90 ${cx} ${cx})"/>
+            </svg>
+            <span class="vital-ring-value">${formatRingValue(centerText)}</span>
+          </div>
+          <p class="vital-widget-label">${label}</p>
+          <p class="vital-widget-sub">${sub || "—"}</p>
+        </div>`;
     }
 
     function metricPill(icon, value, label, zone) {
@@ -210,15 +314,98 @@
         </div>`;
     }
 
-    function showToast(msg) {
+    function showToast(msg, ms) {
       const t = $("#toast");
       t.textContent = msg;
       t.classList.add("show");
-      setTimeout(() => t.classList.remove("show"), 3500);
+      clearTimeout(showToast._timer);
+      showToast._timer = setTimeout(() => t.classList.remove("show"), ms || 3500);
+    }
+
+    function fmtStrain(v) {
+      return v == null ? "—" : Number(v).toFixed(1);
+    }
+
+    function strainBand(v) {
+      if (v == null) return "unknown";
+      const n = Number(v);
+      if (n < 10) return "low";
+      if (n < 14) return "moderate";
+      return "high";
+    }
+
+    function renderVitals(b) {
+      if (!b) return;
+      const el = $("#vitals-row");
+      if (!el) return;
+
+      const sleepH = b.sleep_hours;
+      const sleepTarget = b.sleep_target_hours != null ? Number(b.sleep_target_hours) : 7.5;
+      const sleepPerf = b.sleep_performance != null
+        ? Math.min(100, Number(b.sleep_performance))
+        : null;
+      const sleepPctHours = sleepH != null && sleepTarget > 0
+        ? Math.min(100, (sleepH / sleepTarget) * 100)
+        : null;
+      const sleepPct = sleepPerf != null ? sleepPerf : sleepPctHours;
+      const sleepSub = sleepH != null
+        ? (sleepTarget > 0
+            ? `${Number(sleepH).toFixed(1)} h · target ${sleepTarget.toFixed(1)} h`
+            : `${Number(sleepH).toFixed(1)} h`)
+        : "—";
+
+      const rec = b.recovery;
+      const recZone = b.recovery_zone || "unknown";
+      const recSub = recZone === "unknown" ? "No data" : recZone.toUpperCase();
+
+      const strain = b.day_strain;
+      const strainLevel = strainBand(strain);
+      const strainPct = strain != null ? Math.min(100, (Number(strain) / 21) * 100) : null;
+      const strainSub = strain != null ? `${Number(strain).toFixed(1)} strain` : "Sync Whoop";
+
+      el.innerHTML = [
+        vitalIdentity(b.user),
+        vitalRing({
+          pct: sleepPct,
+          display: sleepPct != null ? `${Math.round(sleepPct)}%` : "—",
+          label: "Sleep",
+          sub: sleepSub,
+          colorClass: "vital-color-sleep",
+          clickable: true,
+          ringId: "vital-sleep",
+        }),
+        vitalRing({
+          pct: rec,
+          display: fmtRecovery(rec),
+          label: "Recovery",
+          sub: recSub,
+          colorClass: zoneClass(recZone),
+        }),
+        vitalRing({
+          pct: strainPct,
+          display: strainPct != null ? `${Math.round(strainPct)}%` : "—",
+          label: "Strain",
+          sub: strainSub,
+          colorClass: `strain-${strainLevel}`,
+        }),
+      ].join("");
+
+      const sleepEl = $("#vital-sleep");
+      if (sleepEl && !sleepEl.dataset.bound) {
+        sleepEl.dataset.bound = "1";
+        sleepEl.addEventListener("click", openSleepDetail);
+        sleepEl.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            openSleepDetail();
+          }
+        });
+      }
     }
 
     function renderBriefing(briefing) {
       if (!briefing) return;
+      renderVitals(briefing);
       const b = briefing;
       const hero = $("#hero-section");
       const heroZone = b.planned_session === "OFF" && !b.already_done ? "rest" : (b.recovery_zone || "unknown");
@@ -227,28 +414,20 @@
       $("#briefing-date").textContent = `${b.weekday} · ${b.date}`;
       $("#briefing-headline").textContent = b.headline;
 
-      const u = b.user || {};
-      const userParts = [];
-      if (u.weight_kg) userParts.push(`${u.weight_kg} kg`);
-      if (u.goal) userParts.push(u.goal);
-      $("#briefing-user").textContent = userParts.join(" · ");
-
-      $("#briefing-recovery").innerHTML = recoveryRing(b.recovery, b.recovery_zone);
       $("#briefing-action").textContent = b.action;
 
       const mods = (b.modifications || []).slice(b.mode === "pre_gym" ? 1 : 0);
       $("#briefing-mods").innerHTML = mods.map((m) => `<li>${m}</li>`).join("");
 
       $("#briefing-yesterday").textContent = b.yesterday ? b.yesterday.message : "";
-      const nutritionBits = [];
-      if (b.nutrition && b.nutrition.journal_prompt) nutritionBits.push(b.nutrition.journal_prompt);
-      if (b.nutrition && Array.isArray(b.nutrition.tips)) nutritionBits.push(...b.nutrition.tips);
-      else if (b.protein && b.protein.message) nutritionBits.push(b.protein.message);
-      $("#briefing-protein").textContent = nutritionBits.join(" · ");
+      $("#briefing-protein").textContent = (b.protein && b.protein.message) ? b.protein.message : "";
 
       const staleEl = $("#briefing-stale");
       if (b.whoop_stale_days != null && b.whoop_stale_days > 0) {
-        staleEl.textContent = `⚠ Whoop data is ${b.whoop_stale_days} day(s) old — upload fresh export`;
+        const hint = b.whoop_stale_days === 1
+          ? "today's recovery may not be scored yet — Sync Whoop or check after wake"
+          : "hit Sync Whoop (or upload a zip if journal is needed)";
+        staleEl.textContent = `⚠ Whoop data is ${b.whoop_stale_days} day(s) old — ${hint}`;
         staleEl.style.display = "inline-flex";
       } else {
         staleEl.style.display = "none";
@@ -302,14 +481,49 @@
       const alerts = (bf.alerts || []).map(a => `<div class="belly-alert">⚠ ${a}</div>`).join("");
       const tips = (bf.tips || []).map(t => `<li>${t}</li>`).join("");
       const waist = bf.waist_note ? `<div class="belly-stat">${bf.waist_note}</div>` : "";
+      const bodyFat = bf.body_fat_note ? `<div class="belly-stat">${bf.body_fat_note}</div>` : "";
       const weight = bf.weight_note ? `<div class="belly-stat belly-weight">${bf.weight_note}</div>` : "";
       const cal = bf.calorie_note ? `<div class="belly-cal">${bf.calorie_note}</div>` : "";
       el.innerHTML = `
         <div class="belly-fat-title">Cut Goal — 4–6 kg Fat Loss</div>
-        ${weight}${waist}${cal}
+        ${weight}${bodyFat}${waist}${cal}
         ${alerts}
         <ul class="belly-tips">${tips}</ul>
       `;
+    }
+
+    function fmtStat(value, unit) {
+      if (value == null || value === "") return "—";
+      return `${value}${unit ? ` ${unit}` : ""}`;
+    }
+
+    function renderBodyStatsSummary(user) {
+      const el = $("#body-stats-summary");
+      const sub = $("#body-stats-summary-sub");
+      const btn = $("#btn-profile");
+      if (!el) return;
+      const u = user || {};
+      if (btn) {
+        btn.textContent = u.name ? u.name.split(/\s+/)[0] : "Profile";
+        btn.title = u.name ? `${u.name} · Profile` : "View profile";
+      }
+      if (sub) {
+        sub.textContent = u.name
+          ? `${u.name} · edit full stats on Profile`
+          : "Key metrics · edit on Profile";
+      }
+      const chips = [
+        { label: "Weight", value: fmtStat(u.weight_kg, "kg") },
+        { label: "Body fat", value: fmtStat(u.body_fat_pct, "%") },
+        { label: "Waist", value: fmtStat(u.waist_cm, "cm") },
+        { label: "Navel", value: fmtStat(u.belly_navel_cm, "cm") },
+      ];
+      el.innerHTML = chips.map((c) => `
+        <div class="body-stat-chip">
+          <span class="body-stat-label">${c.label}</span>
+          <span class="body-stat-chip-value">${c.value}</span>
+        </div>
+      `).join("");
     }
 
     function renderSessionComparison(comp, sessionNote, mode, nextSession) {
@@ -341,6 +555,9 @@
       html += `<div class="comparison-title">${title}</div>`;
       if (comp.duration_min) {
         html += `<p class="empty" style="margin-bottom:0.65rem;">${comp.duration_min} min · ${Math.round(comp.total_volume || 0)} vol</p>`;
+      }
+      if (comp.message) {
+        html += `<p class="session-note required-note"><strong>Required lifts</strong> · ${comp.message}</p>`;
       }
       const variations = comp.variations || null;
       if (variations && variations.message) {
@@ -376,9 +593,9 @@
       if (comp.exercises?.length) {
         html += `<div class="exercise-cards">`;
         html += comp.exercises.map((ex) => `
-          <div class="exercise-card">
-            <div class="exercise-card-name">${ex.exercise_name}</div>
-            <div class="exercise-card-last">Last <strong>${ex.last_top_set}</strong></div>
+          <div class="exercise-card${ex.required ? " required" : ""}">
+            <div class="exercise-card-name">${ex.exercise_name}${ex.required ? ' <span class="req-badge">REQUIRED</span>' : ""}</div>
+            <div class="exercise-card-last">Last <strong>${ex.last_top_set}</strong>${ex.restored_from ? ` <em>(${ex.restored_from})</em>` : ""}</div>
             <div class="exercise-card-target">${ex.target_today}</div>
           </div>
         `).join("");
@@ -405,7 +622,6 @@
       const s = report.summary;
       $("#metric-row").innerHTML = [
         metricPill("🏋️", t.planned_session, "Today's plan"),
-        metricPill("😴", fmtSleep(t.sleep_hours), "Sleep"),
         metricPill("💚", t.hrv != null ? `${Math.round(t.hrv)} ms` : "—", "HRV"),
         metricPill("📊", s.gym_sessions, "Sessions (14d)"),
       ].join("");
@@ -464,13 +680,16 @@
       });
     }
 
-    function renderDailyLog(report, week, schedule) {
-      const plannedMap = Object.fromEntries(week.map((d) => [d.date, d.planned]));
-      const weekdayPlan = { ...schedule };
-      const rows = [...report.daily_log].reverse();
+    const DAILY_LOG_PREVIEW = 7;
+    let dailyLogExpanded = false;
+    let dailyLogRowsCache = [];
+    let dailyLogPlannedMap = {};
+    let dailyLogWeekdayPlan = {};
+
+    function paintDailyLogRows(rows) {
       $("#daily-log").innerHTML = rows.map((row) => {
         const dayName = new Date(row.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
-        const planned = plannedMap[row.date] || weekdayPlan[dayName] || "";
+        const planned = dailyLogPlannedMap[row.date] || dailyLogWeekdayPlan[dayName] || "";
         const zone = row.recovery >= 67 ? "green" : row.recovery >= 50 ? "yellow" : row.recovery != null ? "red" : "unknown";
         return `
           <tr class="${row.jefit_session ? "clickable" : ""}" data-date="${row.date}">
@@ -487,14 +706,57 @@
       });
     }
 
-    function renderInsights(report) {
-      const items = report.insights || [];
+    function syncDailyLogMoreBtn() {
+      const btn = $("#daily-log-more");
+      const hasMore = dailyLogRowsCache.length > DAILY_LOG_PREVIEW;
+      btn.hidden = !hasMore;
+      if (!hasMore) return;
+      btn.textContent = dailyLogExpanded ? "Show less" : "More";
+    }
+
+    function renderDailyLog(report, week, schedule) {
+      dailyLogPlannedMap = Object.fromEntries(week.map((d) => [d.date, d.planned]));
+      dailyLogWeekdayPlan = { ...schedule };
+      dailyLogRowsCache = [...report.daily_log].reverse();
+      dailyLogExpanded = false;
+      const visible = dailyLogRowsCache.slice(0, DAILY_LOG_PREVIEW);
+      paintDailyLogRows(visible);
+      syncDailyLogMoreBtn();
+    }
+
+    $("#daily-log-more").addEventListener("click", () => {
+      dailyLogExpanded = !dailyLogExpanded;
+      const visible = dailyLogExpanded
+        ? dailyLogRowsCache
+        : dailyLogRowsCache.slice(0, DAILY_LOG_PREVIEW);
+      paintDailyLogRows(visible);
+      syncDailyLogMoreBtn();
+    });
+
+    const INSIGHTS_PREVIEW = 7;
+    const INSIGHT_LEVEL_ORDER = { warn: 0, info: 1, good: 2 };
+    let insightsExpanded = false;
+    let insightsCache = [];
+
+    function insightLevel(item) {
+      return typeof item === "string" ? "info" : (item.level || "info");
+    }
+
+    function sortInsightsByImportance(items) {
+      return [...items].sort((a, b) => {
+        const ao = INSIGHT_LEVEL_ORDER[insightLevel(a)] ?? 1;
+        const bo = INSIGHT_LEVEL_ORDER[insightLevel(b)] ?? 1;
+        return ao - bo;
+      });
+    }
+
+    function paintInsights(items) {
       const levelClass = { warn: "insight-warn", info: "insight-info", good: "insight-good" };
       const levelIcon = { warn: "!", info: "i", good: "✓" };
       $("#insights-list").innerHTML = items.length
         ? items.map((i) => {
             const text = typeof i === "string" ? i : i.text;
-            const level = typeof i === "string" ? "info" : (i.level || "info");
+            const level = insightLevel(i);
             const category = typeof i === "string" ? "" : (i.category || "");
             return `<li class="${levelClass[level] || "insight-info"}">
               <span class="insight-badge">${levelIcon[level] || "i"}</span>
@@ -506,6 +768,31 @@
           }).join("")
         : '<li class="empty">Import Jefit + Whoop data for coaching insights.</li>';
     }
+
+    function syncInsightsMoreBtn() {
+      const btn = $("#insights-more");
+      const hasMore = insightsCache.length > INSIGHTS_PREVIEW;
+      btn.hidden = !hasMore;
+      if (!hasMore) return;
+      btn.textContent = insightsExpanded ? "Show less" : "More";
+    }
+
+    function renderInsights(report) {
+      insightsCache = sortInsightsByImportance(report.insights || []);
+      insightsExpanded = false;
+      const visible = insightsCache.slice(0, INSIGHTS_PREVIEW);
+      paintInsights(visible);
+      syncInsightsMoreBtn();
+    }
+
+    $("#insights-more").addEventListener("click", () => {
+      insightsExpanded = !insightsExpanded;
+      const visible = insightsExpanded
+        ? insightsCache
+        : insightsCache.slice(0, INSIGHTS_PREVIEW);
+      paintInsights(visible);
+      syncInsightsMoreBtn();
+    });
 
     function renderLastWorkout(latest) {
       if (!latest) {
@@ -527,17 +814,1028 @@
         <ul class="exercise-list">${exercises}</ul>`;
     }
 
-    function renderImports(imports) {
-      if (!imports.length) {
-        $("#import-log").innerHTML = '<p class="empty">No imports yet.</p>';
+    const chartInstances = { recovery: null, sleep: null, volume: null };
+    let volumeRange = "7d";
+    let volumeTrendsCache = null;
+    let volumeFetchToken = 0;
+
+    function trendsFromDailyLog(report) {
+      const log = (report && report.daily_log) || [];
+      return {
+        dates: log.map((r) => r.date),
+        labels: log.map((r) => (r.date || "").slice(5)),
+        recovery: log.map((r) => r.recovery ?? null),
+        sleep_hours: log.map((r) => r.sleep_hours ?? null),
+        hrv: log.map((r) => r.hrv ?? null),
+        volume: log.map((r) => (r.total_volume != null ? Number(r.total_volume) : null)),
+        sessions: log.map((r) => r.jefit_session ?? null),
+      };
+    }
+
+    function cssVar(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    function chartTheme() {
+      return {
+        text: cssVar("--text-muted") || "#6b7a90",
+        grid: cssVar("--border") || "rgba(255,255,255,0.08)",
+        green: cssVar("--green") || "#34d399",
+        yellow: cssVar("--yellow") || "#fbbf24",
+        red: cssVar("--red") || "#f87171",
+        blue: cssVar("--blue") || "#60a5fa",
+        accent: cssVar("--accent") || "#fb923c",
+        greenDim: cssVar("--green-dim") || "rgba(52,211,153,0.15)",
+        blueDim: cssVar("--blue-dim") || "rgba(96,165,250,0.15)",
+        accentDim: cssVar("--accent-dim") || "rgba(251,146,60,0.15)",
+      };
+    }
+
+    function destroyChart(key) {
+      if (chartInstances[key]) {
+        chartInstances[key].destroy();
+        chartInstances[key] = null;
+      }
+    }
+
+    function avgOf(vals) {
+      const nums = vals.filter((v) => v != null && !Number.isNaN(Number(v))).map(Number);
+      if (!nums.length) return null;
+      return nums.reduce((a, b) => a + b, 0) / nums.length;
+    }
+
+    function hasSeries(vals) {
+      return vals.some((v) => v != null && !Number.isNaN(Number(v)));
+    }
+
+    function setChartEmpty(wrapId, canvasId, message) {
+      const wrap = $(wrapId);
+      destroyChart(canvasId.replace("#chart-", ""));
+      wrap.innerHTML = `<div class="chart-empty">${message}</div>`;
+    }
+
+    function ensureCanvas(wrapId, canvasId) {
+      const wrap = $(wrapId);
+      let canvas = $(canvasId);
+      if (!canvas || !wrap.contains(canvas)) {
+        wrap.innerHTML = `<canvas id="${canvasId.slice(1)}"></canvas>`;
+        canvas = $(canvasId);
+      }
+      return canvas;
+    }
+
+    function baseScales(t) {
+      return {
+        x: {
+          grid: { display: false },
+          ticks: {
+            color: t.text,
+            font: { size: 10, weight: "600" },
+            maxRotation: 0,
+            autoSkip: true,
+            maxTicksLimit: 8,
+          },
+          border: { display: false },
+        },
+        y: {
+          grid: { color: t.grid, drawBorder: false },
+          ticks: {
+            color: t.text,
+            font: { size: 10, weight: "600" },
+            padding: 6,
+          },
+          border: { display: false },
+        },
+      };
+    }
+
+    function syncVolumeRangeButtons() {
+      document.querySelectorAll("[data-volume-range]").forEach((btn) => {
+        btn.classList.toggle("active", btn.getAttribute("data-volume-range") === volumeRange);
+      });
+    }
+
+    function volumeMetaLabel(range) {
+      if (range === "month") return "Last 30 days";
+      if (range === "year") return "Last 12 months";
+      return "Last 7 days";
+    }
+
+    function renderVolumeChart(volumeTrends) {
+      volumeTrendsCache = volumeTrends || null;
+      if (typeof Chart === "undefined") return;
+
+      const range = (volumeTrends && volumeTrends.range) || volumeRange || "7d";
+      volumeRange = range;
+      syncVolumeRangeButtons();
+
+      const labels = (volumeTrends && volumeTrends.labels) || [];
+      const sessions = (volumeTrends && volumeTrends.sessions) || [];
+      const barData = ((volumeTrends && volumeTrends.volume) || []).map((v) =>
+        v == null ? 0 : Number(v)
+      );
+      const granularity = (volumeTrends && volumeTrends.granularity) || "day";
+
+      if (!labels.length) {
+        $("#chart-volume-meta").textContent = volumeMetaLabel(range);
+        setChartEmpty("#chart-volume-wrap", "#chart-volume", "Upload Jefit data to see volume");
         return;
       }
-      $("#import-log").innerHTML = imports.slice(0, 5).map((row) => `
-        <div>${row.source}: ${row.file_path.split(/[/\\\\]/).pop()} · ${row.records} records</div>
-      `).join("");
+
+      const total = barData.reduce((a, b) => a + b, 0);
+      const sessionsCount = barData.filter((v) => v > 0).length;
+      const unit = granularity === "month" ? "month" : "session";
+      $("#chart-volume-meta").textContent =
+        `${sessionsCount} ${unit}${sessionsCount === 1 ? "" : "s"} · ${Math.round(total).toLocaleString()} kg·reps`;
+
+      const t = chartTheme();
+      const canvas = ensureCanvas("#chart-volume-wrap", "#chart-volume");
+      destroyChart("volume");
+      const maxTicks = range === "month" ? 10 : range === "year" ? 12 : 7;
+      chartInstances.volume = new Chart(canvas, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: "Volume",
+            data: barData,
+            backgroundColor: barData.map((v) => (v > 0 ? t.accent : "transparent")),
+            hoverBackgroundColor: t.accent,
+            borderRadius: 6,
+            borderSkipped: false,
+            maxBarThickness: range === "year" ? 36 : 28,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              filter: (item) => item.parsed.y > 0,
+              callbacks: {
+                title: (items) => {
+                  const i = items[0]?.dataIndex;
+                  if (i == null) return "";
+                  const session = sessions[i];
+                  return session ? `${labels[i]} · ${session}` : labels[i];
+                },
+                label: (item) =>
+                  item.parsed.y > 0
+                    ? `Volume ${Math.round(item.parsed.y).toLocaleString()} kg·reps`
+                    : "",
+              },
+            },
+          },
+          scales: {
+            ...baseScales(t),
+            x: {
+              ...baseScales(t).x,
+              ticks: {
+                ...baseScales(t).x.ticks,
+                maxTicksLimit: maxTicks,
+              },
+            },
+            y: {
+              ...baseScales(t).y,
+              beginAtZero: true,
+              ticks: {
+                ...baseScales(t).y.ticks,
+                callback: (v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v),
+              },
+            },
+          },
+        },
+      });
+    }
+
+    async function loadVolumeTrends(range, opts = {}) {
+      const soft = !!opts.soft;
+      const next = range || volumeRange || "7d";
+      const token = ++volumeFetchToken;
+      volumeRange = next;
+      syncVolumeRangeButtons();
+      try {
+        const res = await fetch(`/api/trends/volume?range=${encodeURIComponent(next)}`);
+        if (!res.ok) throw new Error("volume fetch failed");
+        const data = await res.json();
+        if (token !== volumeFetchToken) return;
+        renderVolumeChart(data);
+      } catch (err) {
+        if (token !== volumeFetchToken) return;
+        if (!soft && !volumeTrendsCache) {
+          $("#chart-volume-meta").textContent = "";
+          setChartEmpty("#chart-volume-wrap", "#chart-volume", "Could not load volume");
+        }
+      }
+    }
+
+    function renderTrends(trends) {
+      window.__trendsCache = trends || null;
+      const section = $("#trends-section");
+      if (!trends || !trends.labels || !trends.labels.length) {
+        if (section) section.style.display = "none";
+        return;
+      }
+      if (section) section.style.display = "";
+      if (typeof Chart === "undefined") {
+        $("#trends-sub").textContent = "Charts unavailable";
+        return;
+      }
+
+      $("#trends-sub").textContent = "Recovery & sleep · last 14 days";
+      const t = chartTheme();
+      const labels = trends.labels;
+
+      // --- Recovery ---
+      if (hasSeries(trends.recovery)) {
+        const avg = avgOf(trends.recovery);
+        $("#chart-recovery-meta").textContent =
+          avg != null ? `avg ${Math.round(avg)}%` : "";
+        const canvas = ensureCanvas("#chart-recovery-wrap", "#chart-recovery");
+        destroyChart("recovery");
+        const pointColors = (trends.recovery || []).map((v) => {
+          if (v == null) return t.text;
+          if (v >= 67) return t.green;
+          if (v >= 50) return t.yellow;
+          return t.red;
+        });
+        chartInstances.recovery = new Chart(canvas, {
+          type: "line",
+          data: {
+            labels,
+            datasets: [{
+              label: "Recovery",
+              data: trends.recovery,
+              borderColor: t.green,
+              backgroundColor: (ctx) => {
+                const chart = ctx.chart;
+                const { ctx: c, chartArea } = chart;
+                if (!chartArea) return t.greenDim;
+                const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                g.addColorStop(0, t.greenDim);
+                g.addColorStop(1, "transparent");
+                return g;
+              },
+              fill: true,
+              tension: 0.35,
+              spanGaps: true,
+              pointRadius: 3,
+              pointHoverRadius: 5,
+              pointBackgroundColor: pointColors,
+              pointBorderColor: pointColors,
+              borderWidth: 2,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (item) =>
+                    item.parsed.y == null ? "No data" : `Recovery ${Math.round(item.parsed.y)}%`,
+                },
+              },
+            },
+            scales: {
+              ...baseScales(t),
+              y: {
+                ...baseScales(t).y,
+                min: 0,
+                max: 100,
+                ticks: {
+                  ...baseScales(t).y.ticks,
+                  callback: (v) => `${v}%`,
+                },
+              },
+            },
+          },
+        });
+      } else {
+        $("#chart-recovery-meta").textContent = "";
+        setChartEmpty("#chart-recovery-wrap", "#chart-recovery", "Upload Whoop data to see recovery");
+      }
+
+      // --- Sleep ---
+      if (hasSeries(trends.sleep_hours)) {
+        const avg = avgOf(trends.sleep_hours);
+        $("#chart-sleep-meta").textContent =
+          avg != null ? `avg ${avg.toFixed(1)}h` : "";
+        const canvas = ensureCanvas("#chart-sleep-wrap", "#chart-sleep");
+        destroyChart("sleep");
+        chartInstances.sleep = new Chart(canvas, {
+          type: "line",
+          data: {
+            labels,
+            datasets: [{
+              label: "Sleep",
+              data: trends.sleep_hours,
+              borderColor: t.blue,
+              backgroundColor: (ctx) => {
+                const chart = ctx.chart;
+                const { ctx: c, chartArea } = chart;
+                if (!chartArea) return t.blueDim;
+                const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                g.addColorStop(0, t.blueDim);
+                g.addColorStop(1, "transparent");
+                return g;
+              },
+              fill: true,
+              tension: 0.35,
+              spanGaps: true,
+              pointRadius: 3,
+              pointHoverRadius: 5,
+              pointBackgroundColor: t.blue,
+              pointBorderColor: t.blue,
+              borderWidth: 2,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (item) =>
+                    item.parsed.y == null ? "No data" : `Sleep ${Number(item.parsed.y).toFixed(1)}h`,
+                },
+              },
+            },
+            scales: {
+              ...baseScales(t),
+              y: {
+                ...baseScales(t).y,
+                beginAtZero: true,
+                suggestedMax: 10,
+                ticks: {
+                  ...baseScales(t).y.ticks,
+                  callback: (v) => `${v}h`,
+                },
+              },
+            },
+          },
+        });
+      } else {
+        $("#chart-sleep-meta").textContent = "";
+        setChartEmpty("#chart-sleep-wrap", "#chart-sleep", "Upload Whoop data to see sleep");
+      }
+    }
+
+    let sleepDetailCharts = { hours: null, performance: null };
+
+    function destroySleepDetailCharts() {
+      Object.keys(sleepDetailCharts).forEach((key) => {
+        if (sleepDetailCharts[key]) {
+          sleepDetailCharts[key].destroy();
+          sleepDetailCharts[key] = null;
+        }
+      });
+    }
+
+    function fmtMinAsHm(mins) {
+      if (mins == null || Number.isNaN(Number(mins))) return "—";
+      const total = Math.round(Number(mins));
+      const h = Math.floor(total / 60);
+      const m = total % 60;
+      if (h <= 0) return `${m}m`;
+      return m ? `${h}h ${m}m` : `${h}h`;
+    }
+
+    function sleepMetricCell(label, value, sub) {
+      return `
+        <div class="sleep-metric">
+          <span class="sleep-metric-label">${label}</span>
+          <span class="sleep-metric-value">${value}</span>
+          ${sub ? `<span class="sleep-metric-sub">${sub}</span>` : ""}
+        </div>`;
+    }
+
+    function renderSleepStages(today) {
+      if (!today) return "";
+      const deep = today.deep_min;
+      const rem = today.rem_min;
+      const light = today.light_min;
+      const segments = [
+        { key: "deep", label: "Deep", mins: deep, className: "sleep-stage-deep" },
+        { key: "rem", label: "REM", mins: rem, className: "sleep-stage-rem" },
+        { key: "light", label: "Light", mins: light, className: "sleep-stage-light" },
+      ].filter((s) => s.mins != null && Number(s.mins) > 0);
+      if (!segments.length) {
+        return `<p class="empty sleep-stages-empty">Stage breakdown not available for this night.</p>`;
+      }
+      // Prefer Whoop stage sum so the bar adds to 100%; fall back to hours slept.
+      const stageTotal = segments.reduce((sum, s) => sum + Number(s.mins), 0);
+      const hoursTotal = today.sleep_hours != null ? Number(today.sleep_hours) * 60 : null;
+      const total = stageTotal > 0 ? stageTotal : hoursTotal;
+      if (total == null || total <= 0) {
+        return `<p class="empty sleep-stages-empty">Stage breakdown not available for this night.</p>`;
+      }
+      const bar = segments.map((s) => {
+        const pct = Math.max(0, Math.min(100, (Number(s.mins) / total) * 100));
+        return `<div class="sleep-stage ${s.className}" style="width:${pct.toFixed(1)}%" title="${s.label} ${fmtMinAsHm(s.mins)}"></div>`;
+      }).join("");
+      const legend = segments.map((s) => `
+        <span class="sleep-stage-key">
+          <i class="${s.className}"></i>${s.label} ${fmtMinAsHm(s.mins)}
+        </span>`).join("");
+      return `
+        <div class="sleep-stages-section">
+          <div class="sleep-section-title">Sleep stages</div>
+          <div class="sleep-stages-bar" role="img" aria-label="Sleep stage breakdown">${bar}</div>
+          <div class="sleep-stage-legend">${legend}</div>
+        </div>`;
+    }
+
+    function renderSleepTrendCharts(history, targetHours) {
+      if (typeof Chart === "undefined" || !history || !history.labels || !history.labels.length) {
+        return `<p class="empty">Sync Whoop data to see sleep trends.</p>`;
+      }
+      const hasHours = hasSeries(history.sleep_hours || []);
+      const hasPerf = hasSeries(history.sleep_performance || []);
+      if (!hasHours && !hasPerf) {
+        return `<p class="empty">No sleep history yet — sync Whoop or upload an export.</p>`;
+      }
+      let html = "";
+      if (hasHours) {
+        const avg = avgOf(history.sleep_hours);
+        html += `
+          <div class="sleep-chart-block">
+            <div class="sleep-section-head">
+              <span class="sleep-section-title">Hours slept</span>
+              <span class="sleep-section-meta">${avg != null ? `avg ${avg.toFixed(1)}h` : ""}</span>
+            </div>
+            <div class="sleep-chart-wrap"><canvas id="sleep-chart-hours"></canvas></div>
+          </div>`;
+      }
+      if (hasPerf) {
+        const avgP = avgOf(history.sleep_performance);
+        html += `
+          <div class="sleep-chart-block">
+            <div class="sleep-section-head">
+              <span class="sleep-section-title">Sleep performance</span>
+              <span class="sleep-section-meta">${avgP != null ? `avg ${Math.round(avgP)}%` : ""}</span>
+            </div>
+            <div class="sleep-chart-wrap"><canvas id="sleep-chart-performance"></canvas></div>
+          </div>`;
+      }
+      return html;
+    }
+
+    function paintSleepDetailCharts(history, targetHours) {
+      destroySleepDetailCharts();
+      if (typeof Chart === "undefined" || !history) return;
+      const t = chartTheme();
+      const labels = history.labels || [];
+      const targetLine = targetHours != null ? Number(targetHours) : 7.5;
+
+      if (hasSeries(history.sleep_hours || [])) {
+        const canvas = document.getElementById("sleep-chart-hours");
+        if (canvas) {
+          sleepDetailCharts.hours = new Chart(canvas, {
+            type: "bar",
+            data: {
+              labels,
+              datasets: [{
+                label: "Sleep hours",
+                data: history.sleep_hours,
+                backgroundColor: (history.sleep_hours || []).map((v) =>
+                  v == null ? "transparent" : (Number(v) >= targetLine ? t.blue : t.yellow)
+                ),
+                borderRadius: 6,
+                borderSkipped: false,
+                maxBarThickness: 22,
+              }],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: (item) =>
+                      item.parsed.y == null ? "No data" : `Sleep ${Number(item.parsed.y).toFixed(1)}h`,
+                  },
+                },
+              },
+              scales: {
+                ...baseScales(t),
+                y: {
+                  ...baseScales(t).y,
+                  beginAtZero: true,
+                  suggestedMax: 10,
+                  ticks: {
+                    ...baseScales(t).y.ticks,
+                    callback: (v) => `${v}h`,
+                  },
+                },
+              },
+            },
+          });
+        }
+      }
+
+      if (hasSeries(history.sleep_performance || [])) {
+        const canvas = document.getElementById("sleep-chart-performance");
+        if (canvas) {
+          sleepDetailCharts.performance = new Chart(canvas, {
+            type: "line",
+            data: {
+              labels,
+              datasets: [{
+                label: "Performance",
+                data: history.sleep_performance,
+                borderColor: t.blue,
+                backgroundColor: t.blueDim,
+                fill: true,
+                tension: 0.35,
+                spanGaps: true,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+                pointBackgroundColor: t.blue,
+                borderWidth: 2,
+              }],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: (item) =>
+                      item.parsed.y == null ? "No data" : `Performance ${Math.round(item.parsed.y)}%`,
+                  },
+                },
+              },
+              scales: {
+                ...baseScales(t),
+                y: {
+                  ...baseScales(t).y,
+                  min: 0,
+                  max: 100,
+                  ticks: {
+                    ...baseScales(t).y.ticks,
+                    callback: (v) => `${v}%`,
+                  },
+                },
+              },
+            },
+          });
+        }
+      }
+    }
+
+    async function openSleepDetail() {
+      stopMuscleRecoveryTicker();
+      $("#modal-title").textContent = "Sleep";
+      $("#modal-body").innerHTML = `<p class="empty">Loading sleep data…</p>`;
+      $("#modal-panel")?.classList.remove("modal-wide");
+      $("#modal").classList.add("open");
+      destroySleepDetailCharts();
+
+      try {
+        const res = await fetch("/api/sleep/detail?days=14");
+        if (!res.ok) throw new Error("fetch failed");
+        const data = await res.json();
+        const today = data.today;
+        const target = today?.sleep_target_hours ?? data.sleep_target_hours ?? 7.5;
+        const history = data.history || {};
+
+        if (!today) {
+          $("#modal-body").innerHTML = `
+            <p class="empty">No sleep data for today yet.</p>
+            ${renderSleepTrendCharts(history, target)}
+          `;
+          paintSleepDetailCharts(history, target);
+          return;
+        }
+
+        const perf = today.sleep_performance;
+        const hours = today.sleep_hours;
+        const debt = today.sleep_debt_min;
+        const metrics = [
+          sleepMetricCell(
+            "Performance",
+            perf != null ? `${Math.round(perf)}%` : "—",
+            perf != null && perf >= 85 ? "On target" : perf != null && perf < 70 ? "Below target" : ""
+          ),
+          sleepMetricCell("Hours slept", fmtSleep(hours), `Target ${Number(target).toFixed(1)} h`),
+          sleepMetricCell(
+            "Sleep debt",
+            debt != null ? fmtMinAsHm(debt) : "—",
+            debt != null && debt >= 60 ? "Consider an early night" : ""
+          ),
+          sleepMetricCell("Deep sleep", today.deep_min != null ? fmtMinAsHm(today.deep_min) : "—", ""),
+          sleepMetricCell("REM sleep", today.rem_min != null ? fmtMinAsHm(today.rem_min) : "—", ""),
+          sleepMetricCell(
+            "Light sleep",
+            today.light_min != null ? fmtMinAsHm(today.light_min) : "—",
+            ""
+          ),
+        ].join("");
+
+        $("#modal-body").innerHTML = `
+          <div class="sleep-detail">
+            <div class="sleep-metrics">${metrics}</div>
+            ${renderSleepStages(today)}
+            <div class="sleep-trends-section">
+              <div class="sleep-section-head">
+                <span class="sleep-section-title">Last 14 days</span>
+              </div>
+              ${renderSleepTrendCharts(history, target)}
+            </div>
+          </div>`;
+        paintSleepDetailCharts(history, target);
+      } catch (err) {
+        $("#modal-body").innerHTML = '<p class="empty">Could not load sleep data. Try refresh.</p>';
+      }
+    }
+
+    function muscleZoneClass(zone) {
+      if (zone === "green") return "muscle-zone-green";
+      if (zone === "orange") return "muscle-zone-orange";
+      if (zone === "red") return "muscle-zone-red";
+      return "muscle-zone-muted";
+    }
+
+    // Client-side recovery clock (no API poll). Speed S is a Whoop/nutrition snapshot.
+    // elapsed_effective = (now - last_trained) * S
+    // rate = clamp(100 * elapsed_effective / W, 0, 100)
+    // remaining = max(0, W/S - (now - last_trained))
+    // Example: trained 24h ago, chest W=72, S=1.2 → 40%; S=0.8 → ~27%.
+    // Last gym Aug 22, viewed Aug 30 → elapsed >> W even if S=0.65 → 100% / "—".
+    let muscleRecoveryTimer = null;
+    let muscleRecoveryState = null;
+    let muscleMaskHit = null; // { w, h, order, alphas: { key: Uint8ClampedArray } }
+    const MUSCLE_MASK_KEYS = [
+      "shoulders", "chest", "abs", "biceps", "triceps",
+      "forearms", "upper_leg", "lower_leg", "back", "glutes",
+    ];
+    // Hit-test order: smaller / outer groups before large torso fills
+    const MUSCLE_HIT_ORDER = [
+      "forearms", "biceps", "triceps", "shoulders", "glutes",
+      "lower_leg", "upper_leg", "abs", "chest", "back",
+    ];
+
+    async function ensureMuscleMaskHitData() {
+      if (muscleMaskHit) return muscleMaskHit;
+      const w = 1536;
+      const h = 1024;
+      const alphas = {};
+      for (const key of MUSCLE_MASK_KEYS) {
+        const img = new Image();
+        img.decoding = "async";
+        img.src = `/static/body-map-previews/muscle-masks/${key}.png?v=37`;
+        try {
+          await img.decode();
+        } catch (_) {
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+          });
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, w, h);
+        const data = ctx.getImageData(0, 0, w, h).data;
+        const a = new Uint8Array(w * h);
+        for (let i = 0, p = 0; i < data.length; i += 4, p++) a[p] = data[i + 3];
+        alphas[key] = a;
+      }
+      muscleMaskHit = { w, h, alphas };
+      return muscleMaskHit;
+    }
+
+    function muscleKeyAtPoint(nx, ny) {
+      if (!muscleMaskHit) return null;
+      const { w, h, alphas } = muscleMaskHit;
+      if (nx < 0 || ny < 0 || nx >= w || ny >= h) return null;
+      const idx = ny * w + nx;
+      for (const key of MUSCLE_HIT_ORDER) {
+        const a = alphas[key];
+        if (a && a[idx] > 40) return key;
+      }
+      return null;
+    }
+
+    function setMuscleHoverTip(stage, key, clientX, clientY) {
+      const tip = stage && stage.querySelector(".muscle-hover-tip");
+      if (!tip) return;
+      if (!key || !muscleRecoveryState) {
+        tip.hidden = true;
+        tip.textContent = "";
+        stage.classList.remove("muscle-hovering");
+        if (muscleRecoveryState) muscleRecoveryState.hoverKey = null;
+        return;
+      }
+      const live = liveMuscleSnapshot(
+        (muscleRecoveryState.muscles || []).find((m) => m.key === key) || { key, name: key },
+        Date.now()
+      );
+      const name = live.name || key;
+      tip.textContent = `${name} · ${live.rate}%`;
+      tip.hidden = false;
+      stage.classList.add("muscle-hovering");
+      muscleRecoveryState.hoverKey = key;
+
+      const rect = stage.getBoundingClientRect();
+      let left = clientX - rect.left + 12;
+      let top = clientY - rect.top - 36;
+      tip.style.left = "0px";
+      tip.style.top = "0px";
+      const tw = tip.offsetWidth;
+      const th = tip.offsetHeight;
+      left = Math.min(Math.max(8, left), Math.max(8, rect.width - tw - 8));
+      top = Math.min(Math.max(8, top), Math.max(8, rect.height - th - 8));
+      tip.style.left = `${left}px`;
+      tip.style.top = `${top}px`;
+    }
+
+    function bindMuscleHover(stage) {
+      if (!stage || stage.dataset.hoverBound === "1") return;
+      stage.dataset.hoverBound = "1";
+      const onMove = (e) => {
+        if (!muscleMaskHit) return;
+        const rect = stage.getBoundingClientRect();
+        if (rect.width < 1 || rect.height < 1) return;
+        const nx = Math.floor(((e.clientX - rect.left) / rect.width) * muscleMaskHit.w);
+        const ny = Math.floor(((e.clientY - rect.top) / rect.height) * muscleMaskHit.h);
+        setMuscleHoverTip(stage, muscleKeyAtPoint(nx, ny), e.clientX, e.clientY);
+      };
+      const onLeave = () => setMuscleHoverTip(stage, null);
+      stage.addEventListener("mousemove", onMove);
+      stage.addEventListener("mouseleave", onLeave);
+    }
+
+    function formatMuscleRemaining(remainingMin) {
+      if (remainingMin == null || remainingMin <= 0) return "—";
+      const hours = Math.floor(remainingMin / 60);
+      const minutes = remainingMin % 60;
+      if (hours && minutes) return `${hours}h ${minutes}m`;
+      if (hours) return `${hours}h`;
+      return `${minutes}m`;
+    }
+
+    function zoneForLiveRate(rate, hasTraining) {
+      if (!hasTraining) return "green";
+      if (rate >= 100) return "green";
+      if (rate >= 80) return "orange";
+      if (rate >= 1) return "red";
+      return "muted";
+    }
+
+    function muscleLastTrainedMs(m) {
+      if (m.last_trained_ms != null && Number.isFinite(Number(m.last_trained_ms))) {
+        return Number(m.last_trained_ms);
+      }
+      if (m.last_trained) {
+        const parsed = Date.parse(m.last_trained);
+        if (Number.isFinite(parsed)) return parsed;
+      }
+      return null;
+    }
+
+    function liveMuscleSnapshot(m, nowMs) {
+      const windowH = Number(m.recovery_hours);
+      let speed = Number(m.speed_multiplier);
+      if (!Number.isFinite(speed) || speed <= 0) speed = 1;
+      speed = Math.min(1.35, Math.max(0.65, speed));
+      const lastMs = muscleLastTrainedMs(m);
+      const hasTraining = lastMs != null;
+      if (!hasTraining || !Number.isFinite(windowH) || windowH <= 0) {
+        return {
+          ...m,
+          rate: 100,
+          remaining_min: 0,
+          remaining_label: "—",
+          zone: "green",
+        };
+      }
+      const elapsedH = Math.max(0, (nowMs - lastMs) / 3600000);
+      const elapsedEff = elapsedH * speed;
+      let rate = Math.round(Math.max(0, Math.min(100, 100 * elapsedEff / windowH)));
+      let remainingH = Math.max(0, windowH / speed - elapsedH);
+      let remainingMin = remainingH > 0 ? Math.round(remainingH * 60) : 0;
+      if (rate >= 100) {
+        rate = 100;
+        remainingMin = 0;
+      }
+      return {
+        ...m,
+        rate,
+        remaining_min: remainingMin,
+        remaining_label: formatMuscleRemaining(remainingMin),
+        zone: zoneForLiveRate(rate, true),
+      };
+    }
+
+    function muscleRecoveryNoteText(muscles) {
+      const lowest = (muscles || [])
+        .filter((m) => m.rate < 100)
+        .slice()
+        .sort((a, b) => a.rate - b.rate || String(a.name).localeCompare(String(b.name)))
+        .slice(0, 3);
+      return lowest.length
+        ? `Lowest: ${lowest.map((row) => `${row.name} ${row.rate}%`).join(" · ")}`
+        : "All mapped muscles are fully recovered";
+    }
+
+    function applyMuscleRecoveryTeaser(muscles) {
+      const el = $("#muscle-recovery-teaser");
+      if (!el) return;
+      const tired = (muscles || []).filter((m) => m.rate < 100);
+      if (!tired.length) {
+        el.textContent = "All muscles recovered · tap to view map";
+        return;
+      }
+      const top = tired.slice(0, 2).map((m) => `${m.name} ${m.rate}%`).join(", ");
+      el.textContent = `${tired.length} recovering · ${top}`;
+    }
+
+    function stopMuscleRecoveryTicker() {
+      if (muscleRecoveryTimer) {
+        clearInterval(muscleRecoveryTimer);
+        muscleRecoveryTimer = null;
+      }
+    }
+
+    function applyMuscleRecoveryLive() {
+      if (!muscleRecoveryState) return;
+      const detail = $(".muscle-recovery-detail");
+      if (!detail) {
+        stopMuscleRecoveryTicker();
+        return;
+      }
+      const nowMs = Date.now();
+      const live = muscleRecoveryState.muscles.map((m) => liveMuscleSnapshot(m, nowMs));
+      const byKey = Object.fromEntries(live.map((m) => [m.key, m]));
+      paintMuscleBody($(".muscle-body-stage"), byKey);
+
+      detail.querySelectorAll(".muscle-recovery-row[data-muscle]").forEach((tr) => {
+        const row = byKey[tr.getAttribute("data-muscle")];
+        if (!row) return;
+        const rateTd = tr.querySelector(".muscle-recovery-rate");
+        const timeTd = tr.querySelector(".muscle-recovery-time");
+        if (rateTd) {
+          rateTd.textContent = `${row.rate}%`;
+          rateTd.classList.remove(
+            "muscle-zone-green",
+            "muscle-zone-orange",
+            "muscle-zone-red",
+            "muscle-zone-muted"
+          );
+          rateTd.classList.add(muscleZoneClass(row.zone));
+        }
+        if (timeTd) timeTd.textContent = row.remaining_label || "—";
+      });
+
+      const note = detail.querySelector(".muscle-recovery-note");
+      if (note) note.textContent = muscleRecoveryNoteText(live);
+      applyMuscleRecoveryTeaser(live);
+      if (muscleRecoveryState.hoverKey) {
+        const stage = $(".muscle-body-stage");
+        const tip = stage && stage.querySelector(".muscle-hover-tip");
+        if (stage && tip && !tip.hidden) {
+          const row = byKey[muscleRecoveryState.hoverKey];
+          if (row) tip.textContent = `${row.name} · ${row.rate}%`;
+        }
+      }
+    }
+
+    function startMuscleRecoveryTicker(muscles) {
+      stopMuscleRecoveryTicker();
+      muscleRecoveryState = { muscles: muscles || [], hoverKey: null };
+      applyMuscleRecoveryLive();
+      muscleRecoveryTimer = setInterval(applyMuscleRecoveryLive, 1000);
+    }
+
+    function muscleBodySvg() {
+      const tints = MUSCLE_MASK_KEYS.map((key) => {
+        const src = `/static/body-map-previews/muscle-masks/${key}.png?v=37`;
+        return `<div class="muscle-tint muscle-zone-muted" data-muscle="${key}" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></div>`;
+      }).join("");
+      return `
+<div class="muscle-body-stage">
+  <img class="muscle-body-photo" src="/static/body-map-previews/anatomical-base.png" alt="" draggable="false">
+  <div class="muscle-tints" aria-hidden="true">${tints}</div>
+  <div class="muscle-hover-tip" hidden></div>
+</div>`;
+    }
+
+    function paintMuscleBody(root, byKey) {
+      if (!root) return;
+      root.querySelectorAll("[data-muscle]").forEach((el) => {
+        const key = el.getAttribute("data-muscle");
+        const row = byKey[key];
+        const zone = row ? row.zone : "muted";
+        el.classList.remove(
+          "muscle-zone-green",
+          "muscle-zone-orange",
+          "muscle-zone-red",
+          "muscle-zone-muted"
+        );
+        el.classList.add(muscleZoneClass(zone));
+      });
+    }
+
+    function renderMuscleRecoveryList(muscles) {
+      const rows = (muscles || []).map((m, i) => {
+        const alt = i % 2 === 1 ? " muscle-recovery-row-alt" : "";
+        return `
+          <tr class="muscle-recovery-row${alt}" data-muscle="${m.key}">
+            <td class="muscle-recovery-name">${m.name}</td>
+            <td class="muscle-recovery-rate ${muscleZoneClass(m.zone)}">${m.rate}%</td>
+            <td class="muscle-recovery-time">${m.remaining_label || "—"}</td>
+          </tr>`;
+      }).join("");
+      return `
+        <div class="muscle-recovery-table-wrap">
+          <table class="muscle-recovery-table">
+            <thead>
+              <tr>
+                <th>Muscle</th>
+                <th>Recovery rate</th>
+                <th>Recovery time</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    }
+
+    async function openMuscleRecovery() {
+      stopMuscleRecoveryTicker();
+      destroySleepDetailCharts();
+      $("#modal-title").textContent = "Muscle Recovery";
+      $("#modal-body").innerHTML = `<p class="empty">Loading muscle recovery…</p>`;
+      $("#modal-panel")?.classList.add("modal-wide");
+      $("#modal").classList.add("open");
+
+      try {
+        const res = await fetch("/api/muscle-recovery");
+        if (!res.ok) throw new Error("fetch failed");
+        const data = await res.json();
+        const muscles = data.muscles || [];
+        const live = muscles.map((m) => liveMuscleSnapshot(m, Date.now()));
+        const byKey = Object.fromEntries(live.map((m) => [m.key, m]));
+        const note = muscleRecoveryNoteText(live);
+        const speedCaption = (data.modifiers && data.modifiers.caption)
+          || (data.model && data.model.note)
+          || "";
+        const footnote = (data.model && data.model.note)
+          || "Local last-trained from Jefit; speed from Whoop sleep, recovery, strain, and protein journal.";
+
+        $("#modal-body").innerHTML = `
+          <div class="muscle-recovery-detail">
+            <p class="muscle-recovery-note">${note}</p>
+            ${speedCaption ? `<p class="muscle-recovery-speed">${speedCaption}</p>` : ""}
+            <div class="muscle-body-wrap">${muscleBodySvg()}</div>
+            <div class="muscle-recovery-legend">
+              <span><i class="muscle-swatch muscle-zone-green"></i>100%</span>
+              <span><i class="muscle-swatch muscle-zone-orange"></i>80–99%</span>
+              <span><i class="muscle-swatch muscle-zone-red"></i>1–79%</span>
+            </div>
+            ${renderMuscleRecoveryList(live)}
+            <p class="muscle-recovery-footnote">${footnote}</p>
+          </div>`;
+        paintMuscleBody($(".muscle-body-stage"), byKey);
+        startMuscleRecoveryTicker(muscles);
+        const stage = $(".muscle-body-stage");
+        bindMuscleHover(stage);
+        try {
+          await ensureMuscleMaskHitData();
+        } catch (_) { /* hover disabled if masks fail */ }
+      } catch (err) {
+        stopMuscleRecoveryTicker();
+        $("#modal-body").innerHTML = '<p class="empty">Could not load muscle recovery. Try refresh.</p>';
+      }
+    }
+
+    async function refreshMuscleRecoveryTeaser() {
+      const el = $("#muscle-recovery-teaser");
+      if (!el) return;
+      try {
+        const res = await fetch("/api/muscle-recovery");
+        if (!res.ok) return;
+        const data = await res.json();
+        const muscles = (data.muscles || []).map((m) => liveMuscleSnapshot(m, Date.now()));
+        applyMuscleRecoveryTeaser(muscles);
+      } catch (_) { /* keep default copy */ }
     }
 
     async function openWorkout(date) {
+      stopMuscleRecoveryTicker();
+      destroySleepDetailCharts();
+      $("#modal-panel")?.classList.remove("modal-wide");
       const res = await fetch(`/api/workout/${date}`);
       if (!res.ok) return;
       const data = await res.json();
@@ -556,67 +1854,73 @@
       $("#modal").classList.add("open");
     }
 
-    async function loadDashboard() {
-      $("#loading").style.display = "block";
-      $("#content").style.display = "none";
+    async function loadDashboard(opts = {}) {
+      const soft = !!opts.soft;
+      if (!soft) {
+        $("#loading").style.display = "block";
+        $("#content").style.display = "none";
+      }
       try {
         const res = await fetch("/api/dashboard?days=14");
         const data = await res.json();
         renderBriefing(data.briefing);
+        renderBodyStatsSummary(data.user || {});
         renderToday(data.report);
         renderMetrics(data.report, data.briefing);
         renderOverview(data.report);
         renderWeek(data.week);
+        renderTrends(data.trends || trendsFromDailyLog(data.report));
+        if (data.volume_trends) {
+          renderVolumeChart(data.volume_trends);
+        } else {
+          await loadVolumeTrends(volumeRange, { soft: true });
+        }
         renderDailyLog(data.report, data.week, data.schedule);
         renderInsights(data.report);
         renderLastWorkout(data.latest_workout);
-        renderImports(data.imports);
+        refreshMuscleRecoveryTeaser();
         $("#loading").style.display = "none";
         const content = $("#content");
         content.style.display = "block";
-        content.classList.remove("content-fade");
-        void content.offsetWidth;
-        content.classList.add("content-fade");
+        if (!soft) {
+          content.classList.remove("content-fade");
+          void content.offsetWidth;
+          content.classList.add("content-fade");
+        }
       } catch (err) {
-        $("#loading").innerHTML = '<p>Failed to load. Upload Jefit and Whoop files above.</p>';
+        if (!soft) {
+          $("#loading").innerHTML = '<p>Failed to load. Check your connection and try refresh.</p>';
+        }
       }
     }
 
-    async function uploadFile(endpoint, file, statusEl) {
-      const form = new FormData();
-      form.append("file", file);
-      statusEl.textContent = "…";
-      statusEl.className = "upload-status loading";
-      try {
-        const res = await fetch(endpoint, { method: "POST", body: form });
-        const data = await res.json();
-        if (!res.ok || !data.ok) throw new Error(data.error || "Upload failed");
-        statusEl.textContent = "✓";
-        statusEl.className = "upload-status success";
-        showToast(`Imported ${data.filename}`);
-        await loadDashboard();
-      } catch (err) {
-        statusEl.textContent = "✗";
-        statusEl.className = "upload-status error";
-        showToast(err.message || "Upload failed");
-      }
-    }
-
-    $("#jefit-file").addEventListener("change", (e) => {
-      if (e.target.files[0]) uploadFile("/api/upload/jefit", e.target.files[0], $("#jefit-status"));
-      e.target.value = "";
-    });
-    $("#whoop-file").addEventListener("change", (e) => {
-      if (e.target.files[0]) uploadFile("/api/upload/whoop", e.target.files[0], $("#whoop-status"));
-      e.target.value = "";
-    });
     $("#btn-refresh").addEventListener("click", loadDashboard);
-    $("#modal-close").addEventListener("click", () => $("#modal").classList.remove("open"));
-    $("#modal").addEventListener("click", (e) => {
-      if (e.target === $("#modal")) $("#modal").classList.remove("open");
+    document.querySelectorAll("[data-volume-range]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const next = btn.getAttribute("data-volume-range");
+        if (!next || next === volumeRange) return;
+        loadVolumeTrends(next);
+      });
     });
+    function closeModal() {
+      stopMuscleRecoveryTicker();
+      $("#modal-panel")?.classList.remove("modal-wide");
+      $("#modal").classList.remove("open");
+      destroySleepDetailCharts();
+    }
+
+    $("#modal-close").addEventListener("click", closeModal);
+    $("#modal").addEventListener("click", (e) => {
+      if (e.target === $("#modal")) closeModal();
+    });
+
+    const muscleBtn = $("#btn-muscle-recovery");
+    if (muscleBtn) {
+      muscleBtn.addEventListener("click", openMuscleRecovery);
+    }
 
     initThemeToggle();
+    syncVolumeRangeButtons();
     loadDashboard();
   </script>
 </body>

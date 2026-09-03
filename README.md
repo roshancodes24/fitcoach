@@ -63,12 +63,27 @@ Configured in `config.json` → `integrations.whoop`. Secrets stay out of git:
 |-------|----------------------|
 | **Privacy Policy URL** | `https://roshancodes24.github.io/fitcoach/privacy.html` |
 | **Redirect URL** | `https://roshancodes24.github.io/fitcoach/whoop-callback.html` |
+| **Webhooks** | **Leave empty** (optional — see below) |
 
 4. Copy Client ID and Client Secret
 
 WHOOP expects an `https://` redirect (not plain `http://127.0.0.1`). After consent, `whoop-callback.html` hands the auth code to your local dashboard at `http://127.0.0.1:5000/api/whoop/callback` (or you paste the code into `whoop-auth --code`).
 
 **GitHub Pages:** enable Pages for `roshancodes24/fitcoach` → Source: Deploy from branch → `master` / `/docs`. The repo is currently private; Pages must be publicly reachable for WHOOP to load the privacy URL (make the repo public, or use a GitHub plan that publishes private Pages). After the first push of `docs/`, wait a minute and open the privacy URL to confirm it loads.
+
+### Webhooks (leave blank for FitCoach)
+
+Webhooks are **optional**. They push change notifications (`workout.*`, `sleep.*`, `recovery.*`) so you can avoid polling. FitCoach already syncs on demand via `whoop-sync` / dashboard **Sync**, so you do **not** need a webhook URL to create the app or use the API.
+
+**Do not** paste a GitHub Pages URL here. Pages is static HTML — fine for the OAuth redirect (the browser loads `whoop-callback.html`), but WHOOP webhooks are server-to-server **HTTPS POSTs**. Static hosting cannot run a real receiver or verify signatures.
+
+| Approach | When to use |
+|----------|-------------|
+| **Leave empty** (recommended) | Local FitCoach — poll/sync is enough |
+| Cloudflare Worker / small free host | Only if you later want near-real-time push; needs a public HTTPS POST endpoint + HMAC check with Client Secret |
+| ngrok → local Flask | Temporary testing only — URL changes; do not put in the portal as a stable production URL |
+
+Official behavior (no GET “challenge” handshake like Slack): WHOOP POSTs JSON `{ user_id, id, type, trace_id }` and signs with `X-WHOOP-Signature` + `X-WHOOP-Signature-Timestamp` (HMAC-SHA256 of `timestamp + body` using your Client Secret). Prefer model version **v2** if you ever add a URL (this project’s API client uses `/v2/…`). See [WHOOP webhooks docs](https://developer.whoop.com/docs/developing/webhooks/).
 
 ### Connect and sync
 
